@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Oasis CRM</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="authScreen" class="auth">
+  <div class="authCard">
+    <h1>Oasis CRM</h1>
+    <input id="email" type="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Password" />
+    <button id="btnLogin">Entrar</button>
+    <p id="authError"></p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+<header class="topbar">
+  <h2>Oasis CRM</h2>
+  <button id="btnLogout">Salir</button>
+</header>
+
+<main class="wrap">
+
+<section class="kpis">
+  <div class="kpi"><span>Clientes</span><strong id="kClients">0</strong></div>
+  <div class="kpi"><span>Visitas</span><strong id="kVisits">0</strong></div>
+  <div class="kpi"><span>Ingresos</span><strong id="kRevenue">$0</strong></div>
+</section>
+
+<section class="card">
+  <h3>Nuevo Cliente</h3>
+  <input id="cName" placeholder="Nombre" />
+  <input id="cContact" placeholder="Tel / Email" />
+  <button id="btnAddClient">Guardar Cliente</button>
+</section>
+
+<section class="card">
+  <h3>Clientes</h3>
+  <table>
+    <thead>
+      <tr><th>Nombre</th><th>Contacto</th><th>Total</th><th>Acciones</th></tr>
+    </thead>
+    <tbody id="clientsBody"></tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h3>Nueva Visita</h3>
+  <select id="vClient"></select>
+  <input id="vService" placeholder="Servicio" />
+  <input id="vAmount" type="number" placeholder="Monto" />
+  <button id="btnAddVisit">Guardar Visita</button>
+</section>
+
+<section class="card">
+  <h3>Timeline</h3>
+  <table>
+    <thead>
+      <tr><th>Fecha</th><th>Cliente</th><th>Servicio</th><th>Monto</th></tr>
+    </thead>
+    <tbody id="timelineBody"></tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
