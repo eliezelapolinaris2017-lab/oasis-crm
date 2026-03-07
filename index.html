@@ -6,7 +6,7 @@
   <title>Oasis CRM Pro</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="theme-oasis-modern">
+<body>
   <div class="lockscreen" id="lockScreen">
     <div class="lockCard">
       <div class="lockBrand">
@@ -40,283 +40,293 @@
     </div>
   </div>
 
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">OA</div>
-      <div class="brandText">
-        <div class="brandTitle">Oasis CRM Pro</div>
-        <div class="brandSub">Control comercial</div>
+  <div class="appLayout">
+    <aside class="sidebar">
+      <div class="sidebarBrand">
+        <div class="sidebarLogo">OA</div>
+        <div>
+          <div class="sidebarTitle">Oasis CRM</div>
+          <div class="sidebarSub">Business Panel</div>
+        </div>
       </div>
-    </div>
 
-    <nav class="tabs">
-      <button class="tab is-active" data-view="dashboard" type="button">Dashboard</button>
-      <button class="tab" data-view="clients" type="button">Clientes</button>
-      <button class="tab" data-view="activity" type="button">Actividad</button>
-      <button class="tab" data-view="settings" type="button">Ajustes</button>
-    </nav>
+      <nav class="sidebarNav">
+        <button class="sideLink is-active tab" data-view="dashboard" type="button">Dashboard</button>
+        <button class="sideLink tab" data-view="clients" type="button">Clientes</button>
+        <button class="sideLink tab" data-view="activity" type="button">Actividad</button>
+        <button class="sideLink tab" data-view="settings" type="button">Ajustes</button>
+      </nav>
 
-    <div class="topActions">
-      <button class="btn ghost" id="btnExport" type="button">Exportar</button>
-      <button class="btn ghost" id="btnImport" type="button">Importar</button>
-      <input id="importFile" type="file" accept="application/json" hidden />
-      <button class="btn ghost" id="btnLockApp" type="button">Bloquear</button>
-      <button class="btn primary" id="btnNewClient" type="button">+ Cliente</button>
-    </div>
-  </header>
+      <div class="sidebarFooter">
+        <a class="hubBtn" id="hubBackBtn" href="#">⟵ Hub</a>
+      </div>
+    </aside>
 
-  <main class="wrap">
-    <section class="view is-active" id="view-dashboard">
-      <section class="gridCards">
-        <article class="card kpi kpi-a">
-          <div class="kpiLabel">Clientes</div>
-          <div class="kpiValue" id="kpiClients">0</div>
-        </article>
-        <article class="card kpi kpi-b">
-          <div class="kpiLabel">VIP</div>
-          <div class="kpiValue" id="kpiVIP">0</div>
-        </article>
-        <article class="card kpi kpi-c">
-          <div class="kpiLabel">Ingresos</div>
-          <div class="kpiValue" id="kpiRevenue">$0.00</div>
-        </article>
-      </section>
+    <section class="mainShell">
+      <header class="topbar">
+        <div>
+          <div class="pageTitle">Oasis CRM Pro</div>
+          <div class="pageSub">Seguimiento comercial y cartera de clientes</div>
+        </div>
 
-      <section class="gridCards miniCards">
-        <article class="card miniStat">
-          <div class="miniLabel">Prospectos</div>
-          <div class="miniValue" id="repPros">0</div>
-        </article>
-        <article class="card miniStat">
-          <div class="miniLabel">Activos</div>
-          <div class="miniValue" id="repAct">0</div>
-        </article>
-        <article class="card miniStat">
-          <div class="miniLabel">Pausados</div>
-          <div class="miniValue" id="repPau">0</div>
-        </article>
-      </section>
+        <div class="topActions">
+          <button class="btn ghost" id="btnExport" type="button">Exportar</button>
+          <button class="btn ghost" id="btnImport" type="button">Importar</button>
+          <input id="importFile" type="file" accept="application/json" hidden />
+          <button class="btn ghost" id="btnLockApp" type="button">Bloquear</button>
+          <button class="btn primary" id="btnNewClient" type="button">+ Cliente</button>
+        </div>
+      </header>
 
-      <section class="dashboardGrid">
-        <section class="card section">
-          <div class="sectionHead">
-            <div class="sectionTitle">Top clientes</div>
-          </div>
-          <div class="tableWrap">
-            <table class="gridTable compact">
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Total</th>
-                  <th>Última visita</th>
-                </tr>
-              </thead>
-              <tbody id="topBody"></tbody>
-            </table>
-          </div>
+      <main class="contentWrap">
+        <section class="view is-active" id="view-dashboard">
+          <section class="statsGrid">
+            <article class="statCard">
+              <div class="statLabel">Clientes</div>
+              <div class="statValue" id="kpiClients">0</div>
+            </article>
+            <article class="statCard">
+              <div class="statLabel">VIP</div>
+              <div class="statValue" id="kpiVIP">0</div>
+            </article>
+            <article class="statCard">
+              <div class="statLabel">Ingresos</div>
+              <div class="statValue" id="kpiRevenue">$0.00</div>
+            </article>
+            <article class="statCard">
+              <div class="statLabel">Prospectos</div>
+              <div class="statValue" id="repPros">0</div>
+            </article>
+            <article class="statCard">
+              <div class="statLabel">Activos</div>
+              <div class="statValue" id="repAct">0</div>
+            </article>
+            <article class="statCard">
+              <div class="statLabel">Pausados</div>
+              <div class="statValue" id="repPau">0</div>
+            </article>
+          </section>
+
+          <section class="panelGrid">
+            <section class="panel">
+              <div class="panelHead">
+                <div class="panelTitle">Top clientes</div>
+              </div>
+              <div class="tableWrap">
+                <table class="gridTable compact">
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Total</th>
+                      <th>Última visita</th>
+                    </tr>
+                  </thead>
+                  <tbody id="topBody"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panelHead">
+                <div class="panelTitle">Actividad reciente</div>
+              </div>
+              <div class="tableWrap">
+                <table class="gridTable compact">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Cliente</th>
+                      <th>Servicio</th>
+                      <th>Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recentActivityBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
         </section>
 
-        <section class="card section">
-          <div class="sectionHead">
-            <div class="sectionTitle">Actividad reciente</div>
-          </div>
-          <div class="tableWrap">
-            <table class="gridTable compact">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Cliente</th>
-                  <th>Servicio</th>
-                  <th>Monto</th>
-                </tr>
-              </thead>
-              <tbody id="recentActivityBody"></tbody>
-            </table>
-          </div>
-        </section>
-      </section>
-    </section>
-
-    <section class="view" id="view-clients">
-      <section class="card section">
-        <div class="sectionHead">
-          <div class="sectionTitle">Clientes</div>
-          <div class="rowBtns">
-            <input class="input small" id="clientSearch" placeholder="Buscar..." />
-          </div>
-        </div>
-
-        <div class="tableWrap">
-          <table class="gridTable">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Contacto</th>
-                <th>Estado</th>
-                <th>Tags</th>
-                <th>Última visita</th>
-                <th>Total</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="clientsBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card section" id="clientProfile" style="display:none">
-        <div class="sectionHead">
-          <div>
-            <div class="sectionTitle" id="pName">Cliente</div>
-            <div class="muted" id="pMeta">—</div>
-          </div>
-          <div class="rowBtns">
-            <button class="btn ghost" id="btnCloseProfile" type="button">Cerrar</button>
-            <button class="btn primary" id="btnAddVisit" type="button">+ Visita</button>
-          </div>
-        </div>
-
-        <section class="gridCards gridCards2">
-          <article class="card kpi kpi-b">
-            <div class="kpiLabel">Última visita</div>
-            <div class="kpiValue" id="pLastVisit">—</div>
-          </article>
-          <article class="card kpi kpi-c">
-            <div class="kpiLabel">Facturación</div>
-            <div class="kpiValue" id="pTotal">$0.00</div>
-          </article>
-        </section>
-
-        <div class="grid2" style="margin-top:12px">
-          <div class="field">
-            <label>Nombre</label>
-            <input class="input" id="pNameInput" />
-          </div>
-          <div class="field">
-            <label>Tel / Email</label>
-            <input class="input" id="pContactInput" />
-          </div>
-          <div class="field">
-            <label>Dirección</label>
-            <input class="input" id="pAddrInput" />
-          </div>
-          <div class="field">
-            <label>Estado</label>
-            <select class="input" id="pStatusInput">
-              <option>Prospecto</option>
-              <option>Activo</option>
-              <option>VIP</option>
-              <option>Pausado</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Tags</label>
-            <input class="input" id="pTagsInput" placeholder="mini split, mantenimiento" />
-          </div>
-          <div class="field">
-            <label>Nota</label>
-            <input class="input" id="pNoteInput" />
-          </div>
-        </div>
-
-        <div class="rowBtns" style="margin-top:12px">
-          <button class="btn primary" id="btnSaveClient" type="button">Guardar</button>
-          <button class="btn danger" id="btnDeleteClient" type="button">Eliminar</button>
-        </div>
-
-        <div class="sectionHead" style="margin-top:16px">
-          <div class="sectionTitle">Historial</div>
-          <div class="rowBtns">
-            <input class="input small" id="visitSearch" placeholder="Buscar..." />
-          </div>
-        </div>
-
-        <div class="tableWrap">
-          <table class="gridTable">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Servicio</th>
-                <th>Monto</th>
-                <th>Nota</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="visitsBody"></tbody>
-          </table>
-        </div>
-      </section>
-    </section>
-
-    <section class="view" id="view-activity">
-      <section class="card section">
-        <div class="sectionHead">
-          <div class="sectionTitle">Actividad</div>
-          <input class="input small" id="timelineSearch" placeholder="Buscar..." />
-        </div>
-
-        <div class="tableWrap">
-          <table class="gridTable">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Cliente</th>
-                <th>Servicio</th>
-                <th>Monto</th>
-                <th>Nota</th>
-              </tr>
-            </thead>
-            <tbody id="timelineBody"></tbody>
-          </table>
-        </div>
-      </section>
-    </section>
-
-    <section class="view" id="view-settings">
-      <section class="gridSettings">
-        <section class="card section">
-          <div class="sectionHead">
-            <div class="sectionTitle">PIN</div>
-          </div>
-          <div class="muted" id="pinStatus">PIN activo</div>
-          <div class="rowBtns" style="margin-top:12px">
-            <button class="btn primary" id="btnChangePin" type="button">Cambiar PIN</button>
-            <button class="btn ghost" id="btnLockNow" type="button">Bloquear</button>
-          </div>
-        </section>
-
-        <section class="card section">
-          <div class="sectionHead">
-            <div class="sectionTitle">Sync</div>
-            <div class="rowBtns">
-              <button class="btn primary" id="btnLogin" type="button">Login</button>
-              <button class="btn ghost" id="btnLogout" type="button">Logout</button>
-              <button class="btn ghost" id="btnSyncNow" type="button">Sync</button>
+        <section class="view" id="view-clients">
+          <section class="panel">
+            <div class="panelHead">
+              <div class="panelTitle">Clientes</div>
+              <div class="rowBtns">
+                <input class="input small" id="clientSearch" placeholder="Buscar..." />
+              </div>
             </div>
-          </div>
-          <div class="muted" id="fbStatus">Estado: offline</div>
+
+            <div class="tableWrap">
+              <table class="gridTable">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Contacto</th>
+                    <th>Estado</th>
+                    <th>Tags</th>
+                    <th>Última visita</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="clientsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel" id="clientProfile" style="display:none;margin-top:18px">
+            <div class="panelHead">
+              <div>
+                <div class="panelTitle" id="pName">Cliente</div>
+                <div class="muted" id="pMeta">—</div>
+              </div>
+              <div class="rowBtns">
+                <button class="btn ghost" id="btnCloseProfile" type="button">Cerrar</button>
+                <button class="btn primary" id="btnAddVisit" type="button">+ Visita</button>
+              </div>
+            </div>
+
+            <section class="statsGrid twoCols">
+              <article class="statCard">
+                <div class="statLabel">Última visita</div>
+                <div class="statValue" id="pLastVisit">—</div>
+              </article>
+              <article class="statCard">
+                <div class="statLabel">Facturación</div>
+                <div class="statValue" id="pTotal">$0.00</div>
+              </article>
+            </section>
+
+            <div class="grid2" style="margin-top:16px">
+              <div class="field">
+                <label>Nombre</label>
+                <input class="input" id="pNameInput" />
+              </div>
+              <div class="field">
+                <label>Tel / Email</label>
+                <input class="input" id="pContactInput" />
+              </div>
+              <div class="field">
+                <label>Dirección</label>
+                <input class="input" id="pAddrInput" />
+              </div>
+              <div class="field">
+                <label>Estado</label>
+                <select class="input" id="pStatusInput">
+                  <option>Prospecto</option>
+                  <option>Activo</option>
+                  <option>VIP</option>
+                  <option>Pausado</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Tags</label>
+                <input class="input" id="pTagsInput" />
+              </div>
+              <div class="field">
+                <label>Nota</label>
+                <input class="input" id="pNoteInput" />
+              </div>
+            </div>
+
+            <div class="rowBtns" style="margin-top:14px">
+              <button class="btn primary" id="btnSaveClient" type="button">Guardar</button>
+              <button class="btn danger" id="btnDeleteClient" type="button">Eliminar</button>
+            </div>
+
+            <div class="panelHead" style="margin-top:20px">
+              <div class="panelTitle">Historial</div>
+              <div class="rowBtns">
+                <input class="input small" id="visitSearch" placeholder="Buscar..." />
+              </div>
+            </div>
+
+            <div class="tableWrap">
+              <table class="gridTable">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Servicio</th>
+                    <th>Monto</th>
+                    <th>Nota</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="visitsBody"></tbody>
+              </table>
+            </div>
+          </section>
         </section>
 
-        <section class="card section">
-          <div class="sectionHead">
-            <div class="sectionTitle">Datos</div>
-          </div>
-          <div class="rowBtns">
-            <button class="btn ghost" id="btnSettingsExport" type="button">Exportar</button>
-            <button class="btn ghost" id="btnSettingsImport" type="button">Importar</button>
-            <button class="btn danger" id="btnResetAll" type="button">Borrar local</button>
-          </div>
+        <section class="view" id="view-activity">
+          <section class="panel">
+            <div class="panelHead">
+              <div class="panelTitle">Actividad</div>
+              <input class="input small" id="timelineSearch" placeholder="Buscar..." />
+            </div>
+
+            <div class="tableWrap">
+              <table class="gridTable">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Servicio</th>
+                    <th>Monto</th>
+                    <th>Nota</th>
+                  </tr>
+                </thead>
+                <tbody id="timelineBody"></tbody>
+              </table>
+            </div>
+          </section>
         </section>
-      </section>
+
+        <section class="view" id="view-settings">
+          <section class="panelGrid">
+            <section class="panel">
+              <div class="panelHead">
+                <div class="panelTitle">PIN</div>
+              </div>
+              <div class="muted" id="pinStatus">PIN activo</div>
+              <div class="rowBtns" style="margin-top:14px">
+                <button class="btn primary" id="btnChangePin" type="button">Cambiar PIN</button>
+                <button class="btn ghost" id="btnLockNow" type="button">Bloquear</button>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panelHead">
+                <div class="panelTitle">Sync</div>
+                <div class="rowBtns">
+                  <button class="btn primary" id="btnLogin" type="button">Login</button>
+                  <button class="btn ghost" id="btnLogout" type="button">Logout</button>
+                  <button class="btn ghost" id="btnSyncNow" type="button">Sync</button>
+                </div>
+              </div>
+              <div class="muted" id="fbStatus">Estado: offline</div>
+            </section>
+
+            <section class="panel">
+              <div class="panelHead">
+                <div class="panelTitle">Datos</div>
+              </div>
+              <div class="rowBtns">
+                <button class="btn ghost" id="btnSettingsExport" type="button">Exportar</button>
+                <button class="btn ghost" id="btnSettingsImport" type="button">Importar</button>
+                <button class="btn danger" id="btnResetAll" type="button">Borrar local</button>
+              </div>
+            </section>
+          </section>
+        </section>
+      </main>
     </section>
-  </main>
+  </div>
 
   <div class="modal" id="clientModal" style="display:none">
     <div class="modalCard">
       <div class="modalHead">
-        <div>
-          <div class="modalTitle">Nuevo cliente</div>
-        </div>
+        <div class="modalTitle">Nuevo cliente</div>
         <button class="btn ghost" id="btnCloseModal" type="button">Cerrar</button>
       </div>
 
@@ -338,7 +348,7 @@
           <div class="field"><label>Nota</label><input class="input" id="mNote" /></div>
         </div>
 
-        <div class="rowBtns" style="margin-top:12px">
+        <div class="rowBtns" style="margin-top:14px">
           <button class="btn primary" id="btnCreateClient" type="button">Crear</button>
         </div>
       </div>
@@ -348,9 +358,7 @@
   <div class="modal" id="visitModal" style="display:none">
     <div class="modalCard">
       <div class="modalHead">
-        <div>
-          <div class="modalTitle" id="visitModalTitle">Nueva visita</div>
-        </div>
+        <div class="modalTitle" id="visitModalTitle">Nueva visita</div>
         <button class="btn ghost" id="btnCloseVisitModal" type="button">Cerrar</button>
       </div>
 
@@ -362,14 +370,12 @@
           <div class="field"><label>Nota</label><input class="input" id="vNote" /></div>
         </div>
 
-        <div class="rowBtns" style="margin-top:12px">
+        <div class="rowBtns" style="margin-top:14px">
           <button class="btn primary" id="btnSaveVisit" type="button">Guardar</button>
         </div>
       </div>
     </div>
   </div>
-
-  <a class="hub-fab" id="hubBackBtn" href="#" title="Volver a Oasis Hub" aria-label="Volver a Oasis Hub">⟵ Hub</a>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
