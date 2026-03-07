@@ -52,6 +52,11 @@ function setText(id, text) {
   if (el) el.textContent = text;
 }
 
+function applyVisualLabels() {
+  document.title = "Oasis CRM Pro";
+  setText("lockModeText", getStoredPin() ? "Acceso seguro" : "Crear PIN");
+}
+
 function getStoredPin() {
   return localStorage.getItem(PIN_KEY) || "";
 }
@@ -97,7 +102,7 @@ function showLock(mode = "unlock") {
     setText("lockModeText", mode === "change" ? "Cambiar PIN" : "Crear PIN");
     setText("lockInfo", "Define un PIN de 4 dígitos.");
   } else {
-    setText("lockModeText", "Acceso");
+    setText("lockModeText", "Acceso seguro");
     setText("lockInfo", "Ingresa tu PIN de 4 dígitos.");
   }
 }
@@ -950,6 +955,7 @@ function bindUI() {
   bindUI();
   bindPin();
   updatePinStatus();
+  applyVisualLabels();
 
   try {
     if (window.firebase) {
