@@ -1,17 +1,8 @@
-/* =========================================================
-   Oasis CRM Pro — app.js
-   - UI simplificada y comercial
-   - PIN lock 4 dígitos
-   - LocalStorage + CRUD + Timeline + Dashboard
-   - Firebase Auth + Firestore Sync
-   ========================================================= */
-
 const HUB_URL = "https://eliezelapolinaris2017-lab.github.io/oasis-hub/";
 const KEY = "oasis_crm_pro_v2";
 const PIN_KEY = "oasis_crm_pin_v1";
 const SESSION_UNLOCK_KEY = "oasis_crm_pin_session_v1";
 
-/* ===== Firebase config ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyBm67RjL0QzMRLfo6zUYCI0bak1eGJAR-U",
   authDomain: "oasis-facturacion.firebaseapp.com",
@@ -22,7 +13,6 @@ const firebaseConfig = {
 };
 
 const OWNER_EMAIL = "nexustoolspr@gmail.com";
-
 const AUTO_SYNC_ENABLED = true;
 const AUTO_SYNC_INTERVAL_MS = 3 * 60 * 1000;
 const AUTO_SYNC_DEBOUNCE_MS = 1200;
@@ -40,10 +30,9 @@ const state = {
   activeClientId: null,
   editingVisitId: null,
   pinBuffer: "",
-  pinMode: "unlock" // create | unlock | change
+  pinMode: "unlock"
 };
 
-/* ===== Helpers ===== */
 const $ = (id) => document.getElementById(id);
 const money = (n) => Number(n || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const uid = (p = "id") => `${p}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -63,7 +52,6 @@ function setText(id, text) {
   if (el) el.textContent = text;
 }
 
-/* ===== PIN ===== */
 function getStoredPin() {
   return localStorage.getItem(PIN_KEY) || "";
 }
@@ -90,9 +78,7 @@ function isValidPin(pin) {
 
 function updatePinDots() {
   const dots = document.querySelectorAll("#pinDots span");
-  dots.forEach((dot, i) => {
-    dot.classList.toggle("filled", i < state.pinBuffer.length);
-  });
+  dots.forEach((dot, i) => dot.classList.toggle("filled", i < state.pinBuffer.length));
 }
 
 function clearPinBuffer() {
@@ -103,18 +89,16 @@ function clearPinBuffer() {
 function showLock(mode = "unlock") {
   state.pinMode = mode;
   clearPinBuffer();
-
-  const lock = $("lockScreen");
-  lock.classList.add("show");
+  $("lockScreen").classList.add("show");
 
   const hasPin = !!getStoredPin();
 
   if (!hasPin || mode === "create" || mode === "change") {
     setText("lockModeText", mode === "change" ? "Cambiar PIN" : "Crear PIN");
-    setText("lockInfo", "Define un PIN de 4 dígitos. Hazlo simple para ti, no para el vecino chismoso.");
+    setText("lockInfo", "Define un PIN de 4 dígitos.");
   } else {
-    setText("lockModeText", "Acceso protegido");
-    setText("lockInfo", "Ingresa tu PIN de 4 dígitos para entrar.");
+    setText("lockModeText", "Acceso");
+    setText("lockInfo", "Ingresa tu PIN de 4 dígitos.");
   }
 }
 
@@ -155,10 +139,7 @@ function appendPinDigit(d) {
   if (state.pinBuffer.length >= 4) return;
   state.pinBuffer += String(d);
   updatePinDots();
-
-  if (state.pinBuffer.length === 4) {
-    setTimeout(processPinComplete, 120);
-  }
+  if (state.pinBuffer.length === 4) setTimeout(processPinComplete, 100);
 }
 
 function backspacePin() {
@@ -167,11 +148,9 @@ function backspacePin() {
 }
 
 function updatePinStatus() {
-  const hasPin = !!getStoredPin();
-  setText("pinStatus", hasPin ? "PIN activo y sesión protegida" : "PIN no configurado");
+  setText("pinStatus", getStoredPin() ? "PIN activo" : "PIN no configurado");
 }
 
-/* ===== Storage ===== */
 function normalizeDB(db) {
   db = db && typeof db === "object" ? db : { clients: [], visits: [] };
   db.clients = Array.isArray(db.clients) ? db.clients : [];
@@ -227,12 +206,11 @@ function saveDB(db) {
     localStorage.setItem(KEY, JSON.stringify(db));
     scheduleDebouncedSync("local-change");
   } catch (e) {
-    alert("No se pudo guardar localmente. Revisa espacio o modo privado.");
+    alert("No se pudo guardar localmente.");
     throw e;
   }
 }
 
-/* ===== Views ===== */
 function setView(view) {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("is-active"));
   document.querySelectorAll(".tab").forEach((t) => t.classList.remove("is-active"));
@@ -241,7 +219,6 @@ function setView(view) {
   refreshAll();
 }
 
-/* ===== Helpers negocio ===== */
 function badge(status) {
   if (status === "VIP") return `<span class="badge vip">VIP</span>`;
   if (status === "Activo") return `<span class="badge ok">Activo</span>`;
@@ -258,7 +235,6 @@ function clientTotals(db, clientId) {
   return { total, last, count: vs.length };
 }
 
-/* ===== KPIs ===== */
 function updateKPIs() {
   const db = loadDB();
 
@@ -273,7 +249,7 @@ function updateKPIs() {
   const top = db.clients
     .map((c) => {
       const t = clientTotals(db, c.id);
-      return { id: c.id, name: c.name, total: t.total, last: t.last };
+      return { name: c.name, total: t.total, last: t.last };
     })
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
@@ -283,11 +259,7 @@ function updateKPIs() {
 
   top.forEach((x) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><strong>${escapeHtml(x.name)}</strong></td>
-      <td><strong>${money(x.total)}</strong></td>
-      <td>${escapeHtml(x.last || "—")}</td>
-    `;
+    tr.innerHTML = `<td><strong>${escapeHtml(x.name)}</strong></td><td><strong>${money(x.total)}</strong></td><td>${escapeHtml(x.last || "—")}</td>`;
     topBody.appendChild(tr);
   });
 
@@ -301,7 +273,7 @@ function updateKPIs() {
     .slice(0, 8);
 
   const recentBody = $("recentActivityBody");
-  recentBody.innerHTML = recent.length ? "" : `<tr><td colspan="4" style="opacity:.7;padding:14px">Sin actividad reciente.</td></tr>`;
+  recentBody.innerHTML = recent.length ? "" : `<tr><td colspan="4" style="opacity:.7;padding:14px">Sin actividad.</td></tr>`;
 
   recent.forEach(({ v, c }) => {
     const tr = document.createElement("tr");
@@ -324,7 +296,6 @@ function updateProfileKPIs() {
   setText("pTotal", money(t.total));
 }
 
-/* ===== Clientes ===== */
 function renderClients() {
   const db = loadDB();
   const q = ($("clientSearch").value || "").trim().toLowerCase();
@@ -332,14 +303,8 @@ function renderClients() {
   const rows = db.clients
     .map((c) => {
       const tags = (c.tags || []).join(", ");
-      const match =
-        !q ||
-        (c.name || "").toLowerCase().includes(q) ||
-        (c.contact || "").toLowerCase().includes(q) ||
-        tags.toLowerCase().includes(q);
-
+      const match = !q || (c.name || "").toLowerCase().includes(q) || (c.contact || "").toLowerCase().includes(q) || tags.toLowerCase().includes(q);
       if (!match) return null;
-
       const t = clientTotals(db, c.id);
       return { c, t, tags };
     })
@@ -350,21 +315,15 @@ function renderClients() {
   body.innerHTML = "";
 
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="7" style="opacity:.7;padding:14px">Sin clientes todavía. Empieza con “+ Cliente”.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" style="opacity:.7;padding:14px">Sin clientes.</td></tr>`;
     return;
   }
 
   rows.forEach(({ c, t, tags }) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>
-        <strong>${escapeHtml(c.name)}</strong>
-        <div class="cellSub">${escapeHtml(c.note || "")}</div>
-      </td>
-      <td>
-        ${escapeHtml(c.contact || "—")}
-        <div class="cellSub">${escapeHtml(c.addr || "")}</div>
-      </td>
+      <td><strong>${escapeHtml(c.name)}</strong><div class="cellSub">${escapeHtml(c.note || "")}</div></td>
+      <td>${escapeHtml(c.contact || "—")}<div class="cellSub">${escapeHtml(c.addr || "")}</div></td>
       <td>${badge(c.status || "Prospecto")}</td>
       <td>${escapeHtml(tags || "—")}</td>
       <td>${escapeHtml(t.last || "—")}</td>
@@ -431,7 +390,7 @@ function saveClientEdits() {
 
 function deleteClient(id) {
   if (!id) return;
-  if (!confirm("¿Borrar cliente y todo su historial?")) return;
+  if (!confirm("¿Borrar cliente y su historial?")) return;
 
   const db = loadDB();
   db.clients = db.clients.filter((c) => c.id !== id);
@@ -442,7 +401,6 @@ function deleteClient(id) {
   refreshAll();
 }
 
-/* ===== Visitas ===== */
 function renderVisits() {
   const db = loadDB();
   const cid = state.activeClientId;
@@ -452,12 +410,7 @@ function renderVisits() {
     .filter((v) => v.clientId === cid)
     .filter((v) => {
       if (!q) return true;
-      return (
-        (v.service || "").toLowerCase().includes(q) ||
-        (v.note || "").toLowerCase().includes(q) ||
-        String(v.amount || "").includes(q) ||
-        String(v.date || "").includes(q)
-      );
+      return (v.service || "").toLowerCase().includes(q) || (v.note || "").toLowerCase().includes(q) || String(v.amount || "").includes(q) || String(v.date || "").includes(q);
     })
     .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
 
@@ -465,7 +418,7 @@ function renderVisits() {
   body.innerHTML = "";
 
   if (!vs.length) {
-    body.innerHTML = `<tr><td colspan="5" style="opacity:.7;padding:14px">Sin visitas todavía.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="5" style="opacity:.7;padding:14px">Sin visitas.</td></tr>`;
     return;
   }
 
@@ -522,8 +475,7 @@ function saveVisit() {
   if (!cid) return alert("Abre un cliente primero.");
 
   const date = $("vDate").value || todayISO();
-  const amountRaw = $("vAmount").value;
-  const amount = Number(amountRaw);
+  const amount = Number($("vAmount").value);
   if (Number.isNaN(amount)) return alert("Monto inválido.");
 
   const service = ($("vService").value || "").trim() || "Servicio";
@@ -566,7 +518,6 @@ function deleteVisit(id) {
   refreshAll();
 }
 
-/* ===== Timeline ===== */
 function renderTimeline() {
   const db = loadDB();
   const q = ($("timelineSearch").value || "").trim().toLowerCase();
@@ -579,13 +530,7 @@ function renderTimeline() {
     .filter((x) => x.c)
     .filter(({ v, c }) => {
       if (!q) return true;
-      return (
-        (c.name || "").toLowerCase().includes(q) ||
-        (v.service || "").toLowerCase().includes(q) ||
-        (v.note || "").toLowerCase().includes(q) ||
-        String(v.amount || "").includes(q) ||
-        String(v.date || "").includes(q)
-      );
+      return (c.name || "").toLowerCase().includes(q) || (v.service || "").toLowerCase().includes(q) || (v.note || "").toLowerCase().includes(q) || String(v.amount || "").includes(q) || String(v.date || "").includes(q);
     })
     .sort((a, b) => String(b.v.date || "").localeCompare(String(a.v.date || "")))
     .slice(0, 250);
@@ -611,7 +556,6 @@ function renderTimeline() {
   });
 }
 
-/* ===== Export / Import ===== */
 function exportJSON() {
   const db = loadDB();
   const payload = { exportedAt: new Date().toISOString(), db };
@@ -639,7 +583,6 @@ async function importJSON(file) {
   }
 }
 
-/* ===== Modal Cliente ===== */
 function openClientModal() {
   $("clientModal").style.display = "flex";
   $("mName").value = "";
@@ -682,15 +625,13 @@ function createClient() {
   openProfile(c.id);
 }
 
-/* ===== Reset ===== */
 function resetAll() {
-  if (!confirm("¿Borrar TODO localmente en este navegador?")) return;
+  if (!confirm("¿Borrar todo local?")) return;
   localStorage.removeItem(KEY);
   closeProfile();
   refreshAll();
 }
 
-/* ===== Refresh ===== */
 function refreshAll() {
   updateKPIs();
   renderClients();
@@ -698,7 +639,6 @@ function refreshAll() {
   if (state.activeClientId) openProfile(state.activeClientId);
 }
 
-/* ===== Firebase ===== */
 function fbStatus(text) {
   setText("fbStatus", `Estado: ${text}`);
 }
@@ -764,9 +704,7 @@ async function safeSyncNow(reason = "auto") {
     console.error("SYNC ERROR:", e);
   } finally {
     _syncRunning = false;
-    if (_syncPending) {
-      setTimeout(() => safeSyncNow("pending"), 400);
-    }
+    if (_syncPending) setTimeout(() => safeSyncNow("pending"), 400);
   }
 }
 
@@ -777,21 +715,15 @@ function scheduleDebouncedSync(reason = "local-change") {
 }
 
 function clientCol(uidVal) {
-  return fbDB.collection("users").doc(uidVal)
-    .collection("oasis_crm").doc("clients")
-    .collection("items");
+  return fbDB.collection("users").doc(uidVal).collection("oasis_crm").doc("clients").collection("items");
 }
 
 function visitCol(uidVal) {
-  return fbDB.collection("users").doc(uidVal)
-    .collection("oasis_crm").doc("visits")
-    .collection("items");
+  return fbDB.collection("users").doc(uidVal).collection("oasis_crm").doc("visits").collection("items");
 }
 
 function metaRef(uidVal) {
-  return fbDB.collection("users").doc(uidVal)
-    .collection("oasis_crm").doc("meta")
-    .collection("items").doc("state");
+  return fbDB.collection("users").doc(uidVal).collection("oasis_crm").doc("meta").collection("items").doc("state");
 }
 
 async function testWrite(uidVal) {
@@ -808,7 +740,7 @@ function ts(s) {
 async function pullFirebaseToLocal() {
   const u = fbUser();
   if (!u) throw new Error("No estás logueado.");
-  if (!requireOwner(u)) throw new Error("Cuenta no autorizada. Usa nexustoolspr@gmail.com");
+  if (!requireOwner(u)) throw new Error("Cuenta no autorizada.");
 
   const uidVal = u.uid;
 
@@ -849,7 +781,7 @@ async function pullFirebaseToLocal() {
 async function pushLocalToFirebase() {
   const u = fbUser();
   if (!u) throw new Error("No estás logueado.");
-  if (!requireOwner(u)) throw new Error("Cuenta no autorizada. Usa nexustoolspr@gmail.com");
+  if (!requireOwner(u)) throw new Error("Cuenta no autorizada.");
 
   const uidVal = u.uid;
   const db = loadDB();
@@ -895,7 +827,7 @@ async function fbLogin() {
 
   if (!requireOwner(u)) {
     await fbAuth.signOut();
-    throw new Error("Cuenta no autorizada. Usa nexustoolspr@gmail.com");
+    throw new Error("Cuenta no autorizada.");
   }
 }
 
@@ -907,7 +839,7 @@ async function fbHandleRedirectResult() {
       const u = res.user;
       if (!requireOwner(u)) {
         await fbAuth.signOut();
-        throw new Error("Cuenta no autorizada. Usa nexustoolspr@gmail.com");
+        throw new Error("Cuenta no autorizada.");
       }
     }
   } catch (e) {
@@ -923,7 +855,6 @@ async function fbLogout() {
   await fbAuth.signOut();
 }
 
-/* ===== Bindings ===== */
 function bindPin() {
   document.querySelectorAll("[data-pin]").forEach((btn) => {
     btn.addEventListener("click", () => appendPinDigit(btn.dataset.pin));
@@ -969,10 +900,7 @@ function bindUI() {
   });
 
   $("btnNewClient")?.addEventListener("click", openClientModal);
-  $("btnHeroNewClient")?.addEventListener("click", openClientModal);
-
   $("btnExport")?.addEventListener("click", exportJSON);
-  $("btnHeroExport")?.addEventListener("click", exportJSON);
   $("btnSettingsExport")?.addEventListener("click", exportJSON);
 
   $("btnImport")?.addEventListener("click", () => $("importFile").click());
@@ -1018,7 +946,6 @@ function bindUI() {
   });
 }
 
-/* ===== Boot ===== */
 (function boot() {
   bindUI();
   bindPin();
@@ -1048,7 +975,7 @@ function bindUI() {
           fbStatus("offline");
           stopAutoSyncLoop();
           try { await fbAuth.signOut(); } catch {}
-          alert("Cuenta no autorizada. Usa nexustoolspr@gmail.com");
+          alert("Cuenta no autorizada.");
           return;
         }
 
