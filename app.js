@@ -94,7 +94,9 @@ function clearPinBuffer() {
 function showLock(mode = "unlock") {
   state.pinMode = mode;
   clearPinBuffer();
-  $("lockScreen").classList.add("show");
+
+  const lock = $("lockScreen");
+  if (lock) lock.classList.add("show");
 
   const hasPin = !!getStoredPin();
 
@@ -108,7 +110,8 @@ function showLock(mode = "unlock") {
 }
 
 function hideLock() {
-  $("lockScreen").classList.remove("show");
+  const lock = $("lockScreen");
+  if (lock) lock.classList.remove("show");
   clearPinBuffer();
 }
 
@@ -144,7 +147,10 @@ function appendPinDigit(d) {
   if (state.pinBuffer.length >= 4) return;
   state.pinBuffer += String(d);
   updatePinDots();
-  if (state.pinBuffer.length === 4) setTimeout(processPinComplete, 100);
+
+  if (state.pinBuffer.length === 4) {
+    setTimeout(processPinComplete, 100);
+  }
 }
 
 function backspacePin() {
@@ -167,7 +173,9 @@ function normalizeDB(db) {
     if (!c.id) c.id = uid("c");
     if (!c.name) c.name = "Cliente";
     if (!c.status) c.status = "Prospecto";
-    if (!Array.isArray(c.tags)) c.tags = String(c.tags || "").split(",").map(x => x.trim()).filter(Boolean);
+    if (!Array.isArray(c.tags)) {
+      c.tags = String(c.tags || "").split(",").map((x) => x.trim()).filter(Boolean);
+    }
     if (c.contact == null) c.contact = "";
     if (c.addr == null) c.addr = "";
     if (c.note == null) c.note = "";
@@ -219,8 +227,12 @@ function saveDB(db) {
 function setView(view) {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("is-active"));
   document.querySelectorAll(".tab").forEach((t) => t.classList.remove("is-active"));
+  document.querySelectorAll(".sideLink").forEach((t) => t.classList.remove("is-active"));
+
   $(`view-${view}`)?.classList.add("is-active");
   document.querySelector(`.tab[data-view="${view}"]`)?.classList.add("is-active");
+  document.querySelector(`.sideLink[data-view="${view}"]`)?.classList.add("is-active");
+
   refreshAll();
 }
 
@@ -260,13 +272,18 @@ function updateKPIs() {
     .slice(0, 10);
 
   const topBody = $("topBody");
-  topBody.innerHTML = top.length ? "" : `<tr><td colspan="3" style="opacity:.7;padding:14px">Sin data.</td></tr>`;
-
-  top.forEach((x) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td><strong>${escapeHtml(x.name)}</strong></td><td><strong>${money(x.total)}</strong></td><td>${escapeHtml(x.last || "—")}</td>`;
-    topBody.appendChild(tr);
-  });
+  if (topBody) {
+    topBody.innerHTML = top.length ? "" : `<tr><td colspan="3" style="opacity:.7;padding:14px">Sin data.</td></tr>`;
+    top.forEach((x) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(x.name)}</strong></td>
+        <td><strong>${money(x.total)}</strong></td>
+        <td>${escapeHtml(x.last || "—")}</td>
+      `;
+      topBody.appendChild(tr);
+    });
+  }
 
   const recent = db.visits
     .map((v) => {
@@ -278,24 +295,26 @@ function updateKPIs() {
     .slice(0, 8);
 
   const recentBody = $("recentActivityBody");
-  recentBody.innerHTML = recent.length ? "" : `<tr><td colspan="4" style="opacity:.7;padding:14px">Sin actividad.</td></tr>`;
-
-  recent.forEach(({ v, c }) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(v.date || "—")}</td>
-      <td><strong>${escapeHtml(c.name || "—")}</strong></td>
-      <td>${escapeHtml(v.service || "—")}</td>
-      <td><strong>${money(v.amount || 0)}</strong></td>
-    `;
-    recentBody.appendChild(tr);
-  });
+  if (recentBody) {
+    recentBody.innerHTML = recent.length ? "" : `<tr><td colspan="4" style="opacity:.7;padding:14px">Sin actividad.</td></tr>`;
+    recent.forEach(({ v, c }) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(v.date || "—")}</td>
+        <td><strong>${escapeHtml(c.name || "—")}</strong></td>
+        <td>${escapeHtml(v.service || "—")}</td>
+        <td><strong>${money(v.amount || 0)}</strong></td>
+      `;
+      recentBody.appendChild(tr);
+    });
+  }
 }
 
 function updateProfileKPIs() {
   const db = loadDB();
   const cid = state.activeClientId;
   if (!cid) return;
+
   const t = clientTotals(db, cid);
   setText("pLastVisit", t.last ? t.last : "—");
   setText("pTotal", money(t.total));
@@ -303,13 +322,19 @@ function updateProfileKPIs() {
 
 function renderClients() {
   const db = loadDB();
-  const q = ($("clientSearch").value || "").trim().toLowerCase();
+  const q = ($("clientSearch")?.value || "").trim().toLowerCase();
 
   const rows = db.clients
     .map((c) => {
       const tags = (c.tags || []).join(", ");
-      const match = !q || (c.name || "").toLowerCase().includes(q) || (c.contact || "").toLowerCase().includes(q) || tags.toLowerCase().includes(q);
+      const match =
+        !q ||
+        (c.name || "").toLowerCase().includes(q) ||
+        (c.contact || "").toLowerCase().includes(q) ||
+        tags.toLowerCase().includes(q);
+
       if (!match) return null;
+
       const t = clientTotals(db, c.id);
       return { c, t, tags };
     })
@@ -317,6 +342,8 @@ function renderClients() {
     .sort((a, b) => b.t.total - a.t.total);
 
   const body = $("clientsBody");
+  if (!body) return;
+
   body.innerHTML = "";
 
   if (!rows.length) {
@@ -327,8 +354,14 @@ function renderClients() {
   rows.forEach(({ c, t, tags }) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><strong>${escapeHtml(c.name)}</strong><div class="cellSub">${escapeHtml(c.note || "")}</div></td>
-      <td>${escapeHtml(c.contact || "—")}<div class="cellSub">${escapeHtml(c.addr || "")}</div></td>
+      <td>
+        <strong>${escapeHtml(c.name)}</strong>
+        <div class="cellSub">${escapeHtml(c.note || "")}</div>
+      </td>
+      <td>
+        ${escapeHtml(c.contact || "—")}
+        <div class="cellSub">${escapeHtml(c.addr || "")}</div>
+      </td>
       <td>${badge(c.status || "Prospecto")}</td>
       <td>${escapeHtml(tags || "—")}</td>
       <td>${escapeHtml(t.last || "—")}</td>
@@ -343,8 +376,13 @@ function renderClients() {
     body.appendChild(tr);
   });
 
-  body.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openProfile(b.dataset.open)));
-  body.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => deleteClient(b.dataset.del)));
+  body.querySelectorAll("[data-open]").forEach((b) => {
+    b.addEventListener("click", () => openProfile(b.dataset.open));
+  });
+
+  body.querySelectorAll("[data-del]").forEach((b) => {
+    b.addEventListener("click", () => deleteClient(b.dataset.del));
+  });
 }
 
 function openProfile(clientId) {
@@ -353,17 +391,19 @@ function openProfile(clientId) {
   if (!c) return;
 
   state.activeClientId = clientId;
-  $("clientProfile").style.display = "block";
+
+  const panel = $("clientProfile");
+  if (panel) panel.style.display = "block";
 
   setText("pName", c.name || "Cliente");
   setText("pMeta", `${c.status || "Prospecto"} · ${c.contact || "—"}`);
 
-  $("pNameInput").value = c.name || "";
-  $("pContactInput").value = c.contact || "";
-  $("pAddrInput").value = c.addr || "";
-  $("pStatusInput").value = c.status || "Prospecto";
-  $("pTagsInput").value = (c.tags || []).join(", ");
-  $("pNoteInput").value = c.note || "";
+  if ($("pNameInput")) $("pNameInput").value = c.name || "";
+  if ($("pContactInput")) $("pContactInput").value = c.contact || "";
+  if ($("pAddrInput")) $("pAddrInput").value = c.addr || "";
+  if ($("pStatusInput")) $("pStatusInput").value = c.status || "Prospecto";
+  if ($("pTagsInput")) $("pTagsInput").value = (c.tags || []).join(", ");
+  if ($("pNoteInput")) $("pNoteInput").value = c.note || "";
 
   renderVisits();
   updateProfileKPIs();
@@ -371,7 +411,8 @@ function openProfile(clientId) {
 
 function closeProfile() {
   state.activeClientId = null;
-  $("clientProfile").style.display = "none";
+  const panel = $("clientProfile");
+  if (panel) panel.style.display = "none";
 }
 
 function saveClientEdits() {
@@ -379,12 +420,12 @@ function saveClientEdits() {
   const c = db.clients.find((x) => x.id === state.activeClientId);
   if (!c) return;
 
-  c.name = ($("pNameInput").value || "").trim() || c.name;
-  c.contact = ($("pContactInput").value || "").trim();
-  c.addr = ($("pAddrInput").value || "").trim();
-  c.status = $("pStatusInput").value || "Prospecto";
-  c.tags = ($("pTagsInput").value || "").split(",").map((x) => x.trim()).filter(Boolean);
-  c.note = ($("pNoteInput").value || "").trim();
+  c.name = ($("pNameInput")?.value || "").trim() || c.name;
+  c.contact = ($("pContactInput")?.value || "").trim();
+  c.addr = ($("pAddrInput")?.value || "").trim();
+  c.status = $("pStatusInput")?.value || "Prospecto";
+  c.tags = ($("pTagsInput")?.value || "").split(",").map((x) => x.trim()).filter(Boolean);
+  c.note = ($("pNoteInput")?.value || "").trim();
   c.updatedAt = new Date().toISOString();
 
   saveDB(db);
@@ -409,17 +450,24 @@ function deleteClient(id) {
 function renderVisits() {
   const db = loadDB();
   const cid = state.activeClientId;
-  const q = ($("visitSearch").value || "").trim().toLowerCase();
+  const q = ($("visitSearch")?.value || "").trim().toLowerCase();
 
   const vs = db.visits
     .filter((v) => v.clientId === cid)
     .filter((v) => {
       if (!q) return true;
-      return (v.service || "").toLowerCase().includes(q) || (v.note || "").toLowerCase().includes(q) || String(v.amount || "").includes(q) || String(v.date || "").includes(q);
+      return (
+        (v.service || "").toLowerCase().includes(q) ||
+        (v.note || "").toLowerCase().includes(q) ||
+        String(v.amount || "").includes(q) ||
+        String(v.date || "").includes(q)
+      );
     })
     .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
 
   const body = $("visitsBody");
+  if (!body) return;
+
   body.innerHTML = "";
 
   if (!vs.length) {
@@ -444,34 +492,43 @@ function renderVisits() {
     body.appendChild(tr);
   });
 
-  body.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openVisitModal(b.dataset.edit)));
-  body.querySelectorAll("[data-delv]").forEach((b) => b.addEventListener("click", () => deleteVisit(b.dataset.delv)));
+  body.querySelectorAll("[data-edit]").forEach((b) => {
+    b.addEventListener("click", () => openVisitModal(b.dataset.edit));
+  });
+
+  body.querySelectorAll("[data-delv]").forEach((b) => {
+    b.addEventListener("click", () => deleteVisit(b.dataset.delv));
+  });
 }
 
 function openVisitModal(visitId = null) {
   state.editingVisitId = visitId;
-  $("visitModal").style.display = "flex";
 
-  $("vDate").value = todayISO();
-  $("vAmount").value = "";
-  $("vService").value = "";
-  $("vNote").value = "";
+  const modal = $("visitModal");
+  if (modal) modal.style.display = "flex";
+
+  if ($("vDate")) $("vDate").value = todayISO();
+  if ($("vAmount")) $("vAmount").value = "";
+  if ($("vService")) $("vService").value = "";
+  if ($("vNote")) $("vNote").value = "";
+
   setText("visitModalTitle", visitId ? "Editar visita" : "Nueva visita");
 
   if (visitId) {
     const db = loadDB();
     const v = db.visits.find((x) => x.id === visitId);
     if (v) {
-      $("vDate").value = v.date || todayISO();
-      $("vAmount").value = v.amount ?? 0;
-      $("vService").value = v.service || "";
-      $("vNote").value = v.note || "";
+      if ($("vDate")) $("vDate").value = v.date || todayISO();
+      if ($("vAmount")) $("vAmount").value = v.amount ?? 0;
+      if ($("vService")) $("vService").value = v.service || "";
+      if ($("vNote")) $("vNote").value = v.note || "";
     }
   }
 }
 
 function closeVisitModal() {
-  $("visitModal").style.display = "none";
+  const modal = $("visitModal");
+  if (modal) modal.style.display = "none";
   state.editingVisitId = null;
 }
 
@@ -479,12 +536,13 @@ function saveVisit() {
   const cid = state.activeClientId;
   if (!cid) return alert("Abre un cliente primero.");
 
-  const date = $("vDate").value || todayISO();
-  const amount = Number($("vAmount").value);
+  const date = $("vDate")?.value || todayISO();
+  const amount = Number($("vAmount")?.value);
+
   if (Number.isNaN(amount)) return alert("Monto inválido.");
 
-  const service = ($("vService").value || "").trim() || "Servicio";
-  const note = ($("vNote").value || "").trim();
+  const service = ($("vService")?.value || "").trim() || "Servicio";
+  const note = ($("vNote")?.value || "").trim();
 
   const db = loadDB();
   const now = new Date().toISOString();
@@ -492,6 +550,7 @@ function saveVisit() {
   if (state.editingVisitId) {
     const v = db.visits.find((x) => x.id === state.editingVisitId);
     if (!v) return;
+
     v.date = date;
     v.amount = amount;
     v.service = service;
@@ -525,7 +584,7 @@ function deleteVisit(id) {
 
 function renderTimeline() {
   const db = loadDB();
-  const q = ($("timelineSearch").value || "").trim().toLowerCase();
+  const q = ($("timelineSearch")?.value || "").trim().toLowerCase();
 
   const rows = db.visits
     .map((v) => {
@@ -535,12 +594,20 @@ function renderTimeline() {
     .filter((x) => x.c)
     .filter(({ v, c }) => {
       if (!q) return true;
-      return (c.name || "").toLowerCase().includes(q) || (v.service || "").toLowerCase().includes(q) || (v.note || "").toLowerCase().includes(q) || String(v.amount || "").includes(q) || String(v.date || "").includes(q);
+      return (
+        (c.name || "").toLowerCase().includes(q) ||
+        (v.service || "").toLowerCase().includes(q) ||
+        (v.note || "").toLowerCase().includes(q) ||
+        String(v.amount || "").includes(q) ||
+        String(v.date || "").includes(q)
+      );
     })
     .sort((a, b) => String(b.v.date || "").localeCompare(String(a.v.date || "")))
     .slice(0, 250);
 
   const body = $("timelineBody");
+  if (!body) return;
+
   body.innerHTML = "";
 
   if (!rows.length) {
@@ -578,7 +645,11 @@ async function importJSON(file) {
     const txt = await file.text();
     const data = JSON.parse(txt);
     const db = data.db || data;
-    if (!db.clients || !db.visits) return alert("Archivo inválido.");
+
+    if (!db.clients || !db.visits) {
+      return alert("Archivo inválido.");
+    }
+
     const normalized = normalizeDB({ clients: db.clients, visits: db.visits });
     saveDB(normalized);
     refreshAll();
@@ -589,21 +660,24 @@ async function importJSON(file) {
 }
 
 function openClientModal() {
-  $("clientModal").style.display = "flex";
-  $("mName").value = "";
-  $("mContact").value = "";
-  $("mAddr").value = "";
-  $("mStatus").value = "Prospecto";
-  $("mTags").value = "";
-  $("mNote").value = "";
+  const modal = $("clientModal");
+  if (modal) modal.style.display = "flex";
+
+  if ($("mName")) $("mName").value = "";
+  if ($("mContact")) $("mContact").value = "";
+  if ($("mAddr")) $("mAddr").value = "";
+  if ($("mStatus")) $("mStatus").value = "Prospecto";
+  if ($("mTags")) $("mTags").value = "";
+  if ($("mNote")) $("mNote").value = "";
 }
 
 function closeClientModal() {
-  $("clientModal").style.display = "none";
+  const modal = $("clientModal");
+  if (modal) modal.style.display = "none";
 }
 
 function createClient() {
-  const name = ($("mName").value || "").trim();
+  const name = ($("mName")?.value || "").trim();
   if (!name) return alert("Nombre requerido.");
 
   const db = loadDB();
@@ -612,11 +686,11 @@ function createClient() {
   const c = {
     id: uid("c"),
     name,
-    contact: ($("mContact").value || "").trim(),
-    addr: ($("mAddr").value || "").trim(),
-    status: $("mStatus").value || "Prospecto",
-    tags: ($("mTags").value || "").split(",").map((x) => x.trim()).filter(Boolean),
-    note: ($("mNote").value || "").trim(),
+    contact: ($("mContact")?.value || "").trim(),
+    addr: ($("mAddr")?.value || "").trim(),
+    status: $("mStatus")?.value || "Prospecto",
+    tags: ($("mTags")?.value || "").split(",").map((x) => x.trim()).filter(Boolean),
+    note: ($("mNote")?.value || "").trim(),
     createdAt: now,
     updatedAt: now
   };
@@ -641,7 +715,10 @@ function refreshAll() {
   updateKPIs();
   renderClients();
   renderTimeline();
-  if (state.activeClientId) openProfile(state.activeClientId);
+
+  if (state.activeClientId) {
+    openProfile(state.activeClientId);
+  }
 }
 
 function fbStatus(text) {
@@ -701,6 +778,7 @@ async function safeSyncNow(reason = "auto") {
     await pullFirebaseToLocal();
     await pushLocalToFirebase();
     refreshAll();
+
     const u = fbUser();
     fbStatus(u ? `online (${u.email})` : "offline");
   } catch (e) {
@@ -709,7 +787,9 @@ async function safeSyncNow(reason = "auto") {
     console.error("SYNC ERROR:", e);
   } finally {
     _syncRunning = false;
-    if (_syncPending) setTimeout(() => safeSyncNow("pending"), 400);
+    if (_syncPending) {
+      setTimeout(() => safeSyncNow("pending"), 400);
+    }
   }
 }
 
@@ -732,10 +812,13 @@ function metaRef(uidVal) {
 }
 
 async function testWrite(uidVal) {
-  await metaRef(uidVal).set({
-    lastPingAt: new Date().toISOString(),
-    app: "oasis_crm"
-  }, { merge: true });
+  await metaRef(uidVal).set(
+    {
+      lastPingAt: new Date().toISOString(),
+      app: "oasis_crm"
+    },
+    { merge: true }
+  );
 }
 
 function ts(s) {
@@ -754,21 +837,21 @@ async function pullFirebaseToLocal() {
     visitCol(uidVal).get()
   ]);
 
-  const remoteClients = clientsSnap.docs.map(d => d.data()).filter(Boolean);
-  const remoteVisits = visitsSnap.docs.map(d => d.data()).filter(Boolean);
+  const remoteClients = clientsSnap.docs.map((d) => d.data()).filter(Boolean);
+  const remoteVisits = visitsSnap.docs.map((d) => d.data()).filter(Boolean);
 
   const local = loadDB();
-  const localClientsMap = new Map(local.clients.map(x => [x.id, x]));
-  const localVisitsMap = new Map(local.visits.map(x => [x.id, x]));
+  const localClientsMap = new Map(local.clients.map((x) => [x.id, x]));
+  const localVisitsMap = new Map(local.visits.map((x) => [x.id, x]));
 
-  remoteClients.forEach(rc => {
+  remoteClients.forEach((rc) => {
     const lc = localClientsMap.get(rc.id);
     const rU = ts(rc.updatedAt || rc.createdAt);
     const lU = ts(lc?.updatedAt || lc?.createdAt);
     if (!lc || rU > lU) localClientsMap.set(rc.id, rc);
   });
 
-  remoteVisits.forEach(rv => {
+  remoteVisits.forEach((rv) => {
     const lv = localVisitsMap.get(rv.id);
     const rU = ts(rv.updatedAt || rv.createdAt);
     const lU = ts(lv?.updatedAt || lv?.createdAt);
@@ -795,14 +878,14 @@ async function pushLocalToFirebase() {
 
   const ops = [];
 
-  db.clients.forEach(c => {
+  db.clients.forEach((c) => {
     ops.push({
       ref: clientCol(uidVal).doc(c.id),
       doc: { ...c, updatedAt: c.updatedAt || new Date().toISOString() }
     });
   });
 
-  db.visits.forEach(v => {
+  db.visits.forEach((v) => {
     ops.push({
       ref: visitCol(uidVal).doc(v.id),
       doc: { ...v, updatedAt: v.updatedAt || v.createdAt || new Date().toISOString() }
@@ -812,7 +895,7 @@ async function pushLocalToFirebase() {
   const chunkSize = 450;
   for (let i = 0; i < ops.length; i += chunkSize) {
     const batch = fbDB.batch();
-    ops.slice(i, i + chunkSize).forEach(x => batch.set(x.ref, x.doc, { merge: true }));
+    ops.slice(i, i + chunkSize).forEach((x) => batch.set(x.ref, x.doc, { merge: true }));
     await batch.commit();
   }
 }
@@ -838,6 +921,7 @@ async function fbLogin() {
 
 async function fbHandleRedirectResult() {
   if (!fbReady()) return;
+
   try {
     const res = await fbAuth.getRedirectResult();
     if (res && res.user) {
@@ -880,11 +964,19 @@ function bindPin() {
 
 function bindFirebaseButtons() {
   $("btnLogin")?.addEventListener("click", async () => {
-    try { await fbLogin(); } catch (e) { alert(e?.message || e); }
+    try {
+      await fbLogin();
+    } catch (e) {
+      alert(e?.message || e);
+    }
   });
 
   $("btnLogout")?.addEventListener("click", async () => {
-    try { await fbLogout(); } catch (e) { alert(e?.message || e); }
+    try {
+      await fbLogout();
+    } catch (e) {
+      alert(e?.message || e);
+    }
   });
 
   $("btnSyncNow")?.addEventListener("click", async () => {
@@ -898,9 +990,14 @@ function bindFirebaseButtons() {
 }
 
 function bindUI() {
-  $("hubBackBtn").href = HUB_URL;
+  const hub = $("hubBackBtn");
+  if (hub) hub.href = HUB_URL;
 
   document.querySelectorAll(".tab").forEach((b) => {
+    b.addEventListener("click", () => setView(b.dataset.view));
+  });
+
+  document.querySelectorAll(".sideLink").forEach((b) => {
     b.addEventListener("click", () => setView(b.dataset.view));
   });
 
@@ -908,8 +1005,8 @@ function bindUI() {
   $("btnExport")?.addEventListener("click", exportJSON);
   $("btnSettingsExport")?.addEventListener("click", exportJSON);
 
-  $("btnImport")?.addEventListener("click", () => $("importFile").click());
-  $("btnSettingsImport")?.addEventListener("click", () => $("importFile").click());
+  $("btnImport")?.addEventListener("click", () => $("importFile")?.click());
+  $("btnSettingsImport")?.addEventListener("click", () => $("importFile")?.click());
 
   $("importFile")?.addEventListener("change", (e) => {
     const f = e.target.files?.[0];
@@ -927,7 +1024,8 @@ function bindUI() {
 
   $("btnCloseVisitModal")?.addEventListener("click", closeVisitModal);
   $("btnSaveVisit")?.addEventListener("click", saveVisit);
-  $("vDate").value = todayISO();
+
+  if ($("vDate")) $("vDate").value = todayISO();
 
   $("clientSearch")?.addEventListener("input", renderClients);
   $("visitSearch")?.addEventListener("input", renderVisits);
@@ -980,7 +1078,9 @@ function bindUI() {
         if (!requireOwner(u)) {
           fbStatus("offline");
           stopAutoSyncLoop();
-          try { await fbAuth.signOut(); } catch {}
+          try {
+            await fbAuth.signOut();
+          } catch {}
           alert("Cuenta no autorizada.");
           return;
         }
