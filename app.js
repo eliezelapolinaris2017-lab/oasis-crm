@@ -1,17 +1,17 @@
 /* =========================================================
-   Oasis CRM — app.js
-   - LocalStorage + CRUD + Timeline + Reportes
-   - Firebase Auth + Firestore Sync (AUTO)
-   - Rutas seguras (NO afecta otras apps):
-     /users/{uid}/oasis_crm/clients/items/{id}
-     /users/{uid}/oasis_crm/visits/items/{id}
-     /users/{uid}/oasis_crm/meta/items/state
+   Oasis CRM Pro — app.js
+   - UI simplificada y comercial
+   - PIN lock 4 dígitos
+   - LocalStorage + CRUD + Timeline + Dashboard
+   - Firebase Auth + Firestore Sync
    ========================================================= */
 
 const HUB_URL = "https://eliezelapolinaris2017-lab.github.io/oasis-hub/";
-const KEY = "oasis_crm_v1";
+const KEY = "oasis_crm_pro_v2";
+const PIN_KEY = "oasis_crm_pin_v1";
+const SESSION_UNLOCK_KEY = "oasis_crm_pin_session_v1";
 
-/* ===== Firebase config (TU PROYECTO) ===== */
+/* ===== Firebase config ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyBm67RjL0QzMRLfo6zUYCI0bak1eGJAR-U",
   authDomain: "oasis-facturacion.firebaseapp.com",
@@ -23,17 +23,27 @@ const firebaseConfig = {
 
 const OWNER_EMAIL = "nexustoolspr@gmail.com";
 
-/* ===== Auto Sync (producción) ===== */
 const AUTO_SYNC_ENABLED = true;
-const AUTO_SYNC_INTERVAL_MS = 3 * 60 * 1000; // 3 min backup
-const AUTO_SYNC_DEBOUNCE_MS = 1200;          // evita spam de writes
+const AUTO_SYNC_INTERVAL_MS = 3 * 60 * 1000;
+const AUTO_SYNC_DEBOUNCE_MS = 1200;
 
 let _syncTimer = null;
 let _syncDebounce = null;
 let _syncRunning = false;
 let _syncPending = false;
 
-/* ===== Helpers UI ===== */
+let fbApp = null;
+let fbAuth = null;
+let fbDB = null;
+
+const state = {
+  activeClientId: null,
+  editingVisitId: null,
+  pinBuffer: "",
+  pinMode: "unlock" // create | unlock | change
+};
+
+/* ===== Helpers ===== */
 const $ = (id) => document.getElementById(id);
 const money = (n) => Number(n || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const uid = (p = "id") => `${p}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -48,7 +58,120 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
-/* ===== Storage local ===== */
+function setText(id, text) {
+  const el = $(id);
+  if (el) el.textContent = text;
+}
+
+/* ===== PIN ===== */
+function getStoredPin() {
+  return localStorage.getItem(PIN_KEY) || "";
+}
+
+function setStoredPin(pin) {
+  localStorage.setItem(PIN_KEY, pin);
+}
+
+function clearSessionUnlock() {
+  sessionStorage.removeItem(SESSION_UNLOCK_KEY);
+}
+
+function setSessionUnlock() {
+  sessionStorage.setItem(SESSION_UNLOCK_KEY, "1");
+}
+
+function hasSessionUnlock() {
+  return sessionStorage.getItem(SESSION_UNLOCK_KEY) === "1";
+}
+
+function isValidPin(pin) {
+  return /^\d{4}$/.test(String(pin || ""));
+}
+
+function updatePinDots() {
+  const dots = document.querySelectorAll("#pinDots span");
+  dots.forEach((dot, i) => {
+    dot.classList.toggle("filled", i < state.pinBuffer.length);
+  });
+}
+
+function clearPinBuffer() {
+  state.pinBuffer = "";
+  updatePinDots();
+}
+
+function showLock(mode = "unlock") {
+  state.pinMode = mode;
+  clearPinBuffer();
+
+  const lock = $("lockScreen");
+  lock.classList.add("show");
+
+  const hasPin = !!getStoredPin();
+
+  if (!hasPin || mode === "create" || mode === "change") {
+    setText("lockModeText", mode === "change" ? "Cambiar PIN" : "Crear PIN");
+    setText("lockInfo", "Define un PIN de 4 dígitos. Hazlo simple para ti, no para el vecino chismoso.");
+  } else {
+    setText("lockModeText", "Acceso protegido");
+    setText("lockInfo", "Ingresa tu PIN de 4 dígitos para entrar.");
+  }
+}
+
+function hideLock() {
+  $("lockScreen").classList.remove("show");
+  clearPinBuffer();
+}
+
+function processPinComplete() {
+  const pin = state.pinBuffer;
+  const savedPin = getStoredPin();
+
+  if (!isValidPin(pin)) {
+    clearPinBuffer();
+    return;
+  }
+
+  if (!savedPin || state.pinMode === "create" || state.pinMode === "change") {
+    setStoredPin(pin);
+    setSessionUnlock();
+    hideLock();
+    updatePinStatus();
+    alert(state.pinMode === "change" ? "PIN actualizado ✅" : "PIN creado ✅");
+    return;
+  }
+
+  if (pin === savedPin) {
+    setSessionUnlock();
+    hideLock();
+    return;
+  }
+
+  clearPinBuffer();
+  alert("PIN incorrecto.");
+}
+
+function appendPinDigit(d) {
+  if (state.pinBuffer.length >= 4) return;
+  state.pinBuffer += String(d);
+  updatePinDots();
+
+  if (state.pinBuffer.length === 4) {
+    setTimeout(processPinComplete, 120);
+  }
+}
+
+function backspacePin() {
+  state.pinBuffer = state.pinBuffer.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinStatus() {
+  const hasPin = !!getStoredPin();
+  setText("pinStatus", hasPin ? "PIN activo y sesión protegida" : "PIN no configurado");
+}
+
+/* ===== Storage ===== */
 function normalizeDB(db) {
   db = db && typeof db === "object" ? db : { clients: [], visits: [] };
   db.clients = Array.isArray(db.clients) ? db.clients : [];
@@ -99,14 +222,485 @@ function loadDB() {
   }
 }
 
-/* ===== Firebase global ===== */
-let fbApp = null;
-let fbAuth = null;
-let fbDB = null;
+function saveDB(db) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(db));
+    scheduleDebouncedSync("local-change");
+  } catch (e) {
+    alert("No se pudo guardar localmente. Revisa espacio o modo privado.");
+    throw e;
+  }
+}
 
+/* ===== Views ===== */
+function setView(view) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("is-active"));
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("is-active"));
+  $(`view-${view}`)?.classList.add("is-active");
+  document.querySelector(`.tab[data-view="${view}"]`)?.classList.add("is-active");
+  refreshAll();
+}
+
+/* ===== Helpers negocio ===== */
+function badge(status) {
+  if (status === "VIP") return `<span class="badge vip">VIP</span>`;
+  if (status === "Activo") return `<span class="badge ok">Activo</span>`;
+  if (status === "Prospecto") return `<span class="badge warn">Prospecto</span>`;
+  return `<span class="badge">Pausado</span>`;
+}
+
+function clientTotals(db, clientId) {
+  const vs = db.visits.filter((v) => v.clientId === clientId);
+  const total = vs.reduce((a, v) => a + Number(v.amount || 0), 0);
+  const last = vs.length
+    ? vs.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))[0].date
+    : "";
+  return { total, last, count: vs.length };
+}
+
+/* ===== KPIs ===== */
+function updateKPIs() {
+  const db = loadDB();
+
+  setText("kpiClients", String(db.clients.length));
+  setText("kpiVIP", String(db.clients.filter((c) => c.status === "VIP").length));
+  setText("kpiRevenue", money(db.visits.reduce((a, v) => a + Number(v.amount || 0), 0)));
+
+  setText("repPros", String(db.clients.filter((c) => c.status === "Prospecto").length));
+  setText("repAct", String(db.clients.filter((c) => c.status === "Activo" || c.status === "VIP").length));
+  setText("repPau", String(db.clients.filter((c) => c.status === "Pausado").length));
+
+  const top = db.clients
+    .map((c) => {
+      const t = clientTotals(db, c.id);
+      return { id: c.id, name: c.name, total: t.total, last: t.last };
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
+
+  const topBody = $("topBody");
+  topBody.innerHTML = top.length ? "" : `<tr><td colspan="3" style="opacity:.7;padding:14px">Sin data.</td></tr>`;
+
+  top.forEach((x) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${escapeHtml(x.name)}</strong></td>
+      <td><strong>${money(x.total)}</strong></td>
+      <td>${escapeHtml(x.last || "—")}</td>
+    `;
+    topBody.appendChild(tr);
+  });
+
+  const recent = db.visits
+    .map((v) => {
+      const c = db.clients.find((x) => x.id === v.clientId);
+      return { v, c };
+    })
+    .filter((x) => x.c)
+    .sort((a, b) => String(b.v.date || "").localeCompare(String(a.v.date || "")))
+    .slice(0, 8);
+
+  const recentBody = $("recentActivityBody");
+  recentBody.innerHTML = recent.length ? "" : `<tr><td colspan="4" style="opacity:.7;padding:14px">Sin actividad reciente.</td></tr>`;
+
+  recent.forEach(({ v, c }) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(v.date || "—")}</td>
+      <td><strong>${escapeHtml(c.name || "—")}</strong></td>
+      <td>${escapeHtml(v.service || "—")}</td>
+      <td><strong>${money(v.amount || 0)}</strong></td>
+    `;
+    recentBody.appendChild(tr);
+  });
+}
+
+function updateProfileKPIs() {
+  const db = loadDB();
+  const cid = state.activeClientId;
+  if (!cid) return;
+  const t = clientTotals(db, cid);
+  setText("pLastVisit", t.last ? t.last : "—");
+  setText("pTotal", money(t.total));
+}
+
+/* ===== Clientes ===== */
+function renderClients() {
+  const db = loadDB();
+  const q = ($("clientSearch").value || "").trim().toLowerCase();
+
+  const rows = db.clients
+    .map((c) => {
+      const tags = (c.tags || []).join(", ");
+      const match =
+        !q ||
+        (c.name || "").toLowerCase().includes(q) ||
+        (c.contact || "").toLowerCase().includes(q) ||
+        tags.toLowerCase().includes(q);
+
+      if (!match) return null;
+
+      const t = clientTotals(db, c.id);
+      return { c, t, tags };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.t.total - a.t.total);
+
+  const body = $("clientsBody");
+  body.innerHTML = "";
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="7" style="opacity:.7;padding:14px">Sin clientes todavía. Empieza con “+ Cliente”.</td></tr>`;
+    return;
+  }
+
+  rows.forEach(({ c, t, tags }) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <strong>${escapeHtml(c.name)}</strong>
+        <div class="cellSub">${escapeHtml(c.note || "")}</div>
+      </td>
+      <td>
+        ${escapeHtml(c.contact || "—")}
+        <div class="cellSub">${escapeHtml(c.addr || "")}</div>
+      </td>
+      <td>${badge(c.status || "Prospecto")}</td>
+      <td>${escapeHtml(tags || "—")}</td>
+      <td>${escapeHtml(t.last || "—")}</td>
+      <td><strong>${money(t.total)}</strong></td>
+      <td>
+        <div class="aBtns">
+          <button class="aBtn" data-open="${c.id}" type="button">Abrir</button>
+          <button class="aBtn danger" data-del="${c.id}" type="button">Borrar</button>
+        </div>
+      </td>
+    `;
+    body.appendChild(tr);
+  });
+
+  body.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openProfile(b.dataset.open)));
+  body.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => deleteClient(b.dataset.del)));
+}
+
+function openProfile(clientId) {
+  const db = loadDB();
+  const c = db.clients.find((x) => x.id === clientId);
+  if (!c) return;
+
+  state.activeClientId = clientId;
+  $("clientProfile").style.display = "block";
+
+  setText("pName", c.name || "Cliente");
+  setText("pMeta", `${c.status || "Prospecto"} · ${c.contact || "—"}`);
+
+  $("pNameInput").value = c.name || "";
+  $("pContactInput").value = c.contact || "";
+  $("pAddrInput").value = c.addr || "";
+  $("pStatusInput").value = c.status || "Prospecto";
+  $("pTagsInput").value = (c.tags || []).join(", ");
+  $("pNoteInput").value = c.note || "";
+
+  renderVisits();
+  updateProfileKPIs();
+}
+
+function closeProfile() {
+  state.activeClientId = null;
+  $("clientProfile").style.display = "none";
+}
+
+function saveClientEdits() {
+  const db = loadDB();
+  const c = db.clients.find((x) => x.id === state.activeClientId);
+  if (!c) return;
+
+  c.name = ($("pNameInput").value || "").trim() || c.name;
+  c.contact = ($("pContactInput").value || "").trim();
+  c.addr = ($("pAddrInput").value || "").trim();
+  c.status = $("pStatusInput").value || "Prospecto";
+  c.tags = ($("pTagsInput").value || "").split(",").map((x) => x.trim()).filter(Boolean);
+  c.note = ($("pNoteInput").value || "").trim();
+  c.updatedAt = new Date().toISOString();
+
+  saveDB(db);
+  openProfile(c.id);
+  renderClients();
+  updateKPIs();
+}
+
+function deleteClient(id) {
+  if (!id) return;
+  if (!confirm("¿Borrar cliente y todo su historial?")) return;
+
+  const db = loadDB();
+  db.clients = db.clients.filter((c) => c.id !== id);
+  db.visits = db.visits.filter((v) => v.clientId !== id);
+  saveDB(db);
+
+  if (state.activeClientId === id) closeProfile();
+  refreshAll();
+}
+
+/* ===== Visitas ===== */
+function renderVisits() {
+  const db = loadDB();
+  const cid = state.activeClientId;
+  const q = ($("visitSearch").value || "").trim().toLowerCase();
+
+  const vs = db.visits
+    .filter((v) => v.clientId === cid)
+    .filter((v) => {
+      if (!q) return true;
+      return (
+        (v.service || "").toLowerCase().includes(q) ||
+        (v.note || "").toLowerCase().includes(q) ||
+        String(v.amount || "").includes(q) ||
+        String(v.date || "").includes(q)
+      );
+    })
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+
+  const body = $("visitsBody");
+  body.innerHTML = "";
+
+  if (!vs.length) {
+    body.innerHTML = `<tr><td colspan="5" style="opacity:.7;padding:14px">Sin visitas todavía.</td></tr>`;
+    return;
+  }
+
+  vs.forEach((v) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(v.date || "—")}</td>
+      <td><strong>${escapeHtml(v.service || "—")}</strong></td>
+      <td><strong>${money(v.amount || 0)}</strong></td>
+      <td>${escapeHtml(v.note || "")}</td>
+      <td>
+        <div class="aBtns">
+          <button class="aBtn" data-edit="${v.id}" type="button">Editar</button>
+          <button class="aBtn danger" data-delv="${v.id}" type="button">Borrar</button>
+        </div>
+      </td>
+    `;
+    body.appendChild(tr);
+  });
+
+  body.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openVisitModal(b.dataset.edit)));
+  body.querySelectorAll("[data-delv]").forEach((b) => b.addEventListener("click", () => deleteVisit(b.dataset.delv)));
+}
+
+function openVisitModal(visitId = null) {
+  state.editingVisitId = visitId;
+  $("visitModal").style.display = "flex";
+
+  $("vDate").value = todayISO();
+  $("vAmount").value = "";
+  $("vService").value = "";
+  $("vNote").value = "";
+  setText("visitModalTitle", visitId ? "Editar visita" : "Nueva visita");
+
+  if (visitId) {
+    const db = loadDB();
+    const v = db.visits.find((x) => x.id === visitId);
+    if (v) {
+      $("vDate").value = v.date || todayISO();
+      $("vAmount").value = v.amount ?? 0;
+      $("vService").value = v.service || "";
+      $("vNote").value = v.note || "";
+    }
+  }
+}
+
+function closeVisitModal() {
+  $("visitModal").style.display = "none";
+  state.editingVisitId = null;
+}
+
+function saveVisit() {
+  const cid = state.activeClientId;
+  if (!cid) return alert("Abre un cliente primero.");
+
+  const date = $("vDate").value || todayISO();
+  const amountRaw = $("vAmount").value;
+  const amount = Number(amountRaw);
+  if (Number.isNaN(amount)) return alert("Monto inválido.");
+
+  const service = ($("vService").value || "").trim() || "Servicio";
+  const note = ($("vNote").value || "").trim();
+
+  const db = loadDB();
+  const now = new Date().toISOString();
+
+  if (state.editingVisitId) {
+    const v = db.visits.find((x) => x.id === state.editingVisitId);
+    if (!v) return;
+    v.date = date;
+    v.amount = amount;
+    v.service = service;
+    v.note = note;
+    v.updatedAt = now;
+  } else {
+    db.visits.unshift({
+      id: uid("v"),
+      clientId: cid,
+      date,
+      amount,
+      service,
+      note,
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+
+  saveDB(db);
+  closeVisitModal();
+  refreshAll();
+}
+
+function deleteVisit(id) {
+  if (!confirm("¿Borrar visita?")) return;
+  const db = loadDB();
+  db.visits = db.visits.filter((v) => v.id !== id);
+  saveDB(db);
+  refreshAll();
+}
+
+/* ===== Timeline ===== */
+function renderTimeline() {
+  const db = loadDB();
+  const q = ($("timelineSearch").value || "").trim().toLowerCase();
+
+  const rows = db.visits
+    .map((v) => {
+      const c = db.clients.find((x) => x.id === v.clientId);
+      return { v, c };
+    })
+    .filter((x) => x.c)
+    .filter(({ v, c }) => {
+      if (!q) return true;
+      return (
+        (c.name || "").toLowerCase().includes(q) ||
+        (v.service || "").toLowerCase().includes(q) ||
+        (v.note || "").toLowerCase().includes(q) ||
+        String(v.amount || "").includes(q) ||
+        String(v.date || "").includes(q)
+      );
+    })
+    .sort((a, b) => String(b.v.date || "").localeCompare(String(a.v.date || "")))
+    .slice(0, 250);
+
+  const body = $("timelineBody");
+  body.innerHTML = "";
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="5" style="opacity:.7;padding:14px">Sin actividad.</td></tr>`;
+    return;
+  }
+
+  rows.forEach(({ v, c }) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(v.date || "—")}</td>
+      <td><strong>${escapeHtml(c.name || "—")}</strong></td>
+      <td>${escapeHtml(v.service || "—")}</td>
+      <td><strong>${money(v.amount || 0)}</strong></td>
+      <td>${escapeHtml(v.note || "")}</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+/* ===== Export / Import ===== */
+function exportJSON() {
+  const db = loadDB();
+  const payload = { exportedAt: new Date().toISOString(), db };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `oasis_crm_pro_${todayISO()}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+async function importJSON(file) {
+  try {
+    const txt = await file.text();
+    const data = JSON.parse(txt);
+    const db = data.db || data;
+    if (!db.clients || !db.visits) return alert("Archivo inválido.");
+    const normalized = normalizeDB({ clients: db.clients, visits: db.visits });
+    saveDB(normalized);
+    refreshAll();
+    alert("Importado ✅");
+  } catch {
+    alert("No se pudo importar.");
+  }
+}
+
+/* ===== Modal Cliente ===== */
+function openClientModal() {
+  $("clientModal").style.display = "flex";
+  $("mName").value = "";
+  $("mContact").value = "";
+  $("mAddr").value = "";
+  $("mStatus").value = "Prospecto";
+  $("mTags").value = "";
+  $("mNote").value = "";
+}
+
+function closeClientModal() {
+  $("clientModal").style.display = "none";
+}
+
+function createClient() {
+  const name = ($("mName").value || "").trim();
+  if (!name) return alert("Nombre requerido.");
+
+  const db = loadDB();
+  const now = new Date().toISOString();
+
+  const c = {
+    id: uid("c"),
+    name,
+    contact: ($("mContact").value || "").trim(),
+    addr: ($("mAddr").value || "").trim(),
+    status: $("mStatus").value || "Prospecto",
+    tags: ($("mTags").value || "").split(",").map((x) => x.trim()).filter(Boolean),
+    note: ($("mNote").value || "").trim(),
+    createdAt: now,
+    updatedAt: now
+  };
+
+  db.clients.unshift(c);
+  saveDB(db);
+
+  closeClientModal();
+  refreshAll();
+  setView("clients");
+  openProfile(c.id);
+}
+
+/* ===== Reset ===== */
+function resetAll() {
+  if (!confirm("¿Borrar TODO localmente en este navegador?")) return;
+  localStorage.removeItem(KEY);
+  closeProfile();
+  refreshAll();
+}
+
+/* ===== Refresh ===== */
+function refreshAll() {
+  updateKPIs();
+  renderClients();
+  renderTimeline();
+  if (state.activeClientId) openProfile(state.activeClientId);
+}
+
+/* ===== Firebase ===== */
 function fbStatus(text) {
-  const el = $("fbStatus");
-  if (el) el.textContent = `Estado: ${text}`;
+  setText("fbStatus", `Estado: ${text}`);
 }
 
 function fbReady() {
@@ -126,7 +720,6 @@ function requireOwner(u) {
   return !!(u?.email && u.email.toLowerCase() === OWNER_EMAIL.toLowerCase());
 }
 
-/* ===== Auto Sync core ===== */
 function canAutoSync() {
   if (!AUTO_SYNC_ENABLED) return false;
   if (!fbReady()) return false;
@@ -183,467 +776,6 @@ function scheduleDebouncedSync(reason = "local-change") {
   _syncDebounce = setTimeout(() => safeSyncNow(reason), AUTO_SYNC_DEBOUNCE_MS);
 }
 
-/* ===== SaveDB (con auto-sync) ===== */
-function saveDB(db) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(db));
-    // auto-sync al cambiar data (sin reventar iOS)
-    scheduleDebouncedSync("local-change");
-  } catch (e) {
-    alert("No se pudo guardar local (Safari/iOS). Sal de modo privado o libera espacio.");
-    throw e;
-  }
-}
-
-/* ===== Estado UI ===== */
-const state = {
-  activeClientId: null,
-  editingVisitId: null
-};
-
-/* ===== NAV ===== */
-function setView(view) {
-  document.querySelectorAll(".view").forEach((v) => v.classList.remove("is-active"));
-  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("is-active"));
-  $(`view-${view}`)?.classList.add("is-active");
-  document.querySelector(`.tab[data-view="${view}"]`)?.classList.add("is-active");
-  refreshAll();
-}
-
-/* ===== KPI helpers ===== */
-function badge(status) {
-  if (status === "VIP") return `<span class="badge vip">VIP</span>`;
-  if (status === "Activo") return `<span class="badge ok">Activo</span>`;
-  if (status === "Prospecto") return `<span class="badge warn">Prospecto</span>`;
-  return `<span class="badge">Pausado</span>`;
-}
-
-function clientTotals(db, clientId) {
-  const vs = db.visits.filter((v) => v.clientId === clientId);
-  const total = vs.reduce((a, v) => a + Number(v.amount || 0), 0);
-  const last = vs.length
-    ? vs.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))[0].date
-    : "";
-  return { total, last, count: vs.length };
-}
-
-function updateProfileKPIs() {
-  const db = loadDB();
-  const cid = state.activeClientId;
-  if (!cid) return;
-  const t = clientTotals(db, cid);
-  const lastEl = $("pLastVisit");
-  const totalEl = $("pTotal");
-  if (lastEl) lastEl.textContent = t.last ? t.last : "—";
-  if (totalEl) totalEl.textContent = money(t.total);
-}
-
-function updateKPIs() {
-  const db = loadDB();
-
-  $("kpiClients").textContent = String(db.clients.length);
-  $("kpiVIP").textContent = String(db.clients.filter((c) => c.status === "VIP").length);
-  $("kpiRevenue").textContent = money(db.visits.reduce((a, v) => a + Number(v.amount || 0), 0));
-
-  $("repPros").textContent = String(db.clients.filter((c) => c.status === "Prospecto").length);
-  $("repAct").textContent = String(db.clients.filter((c) => c.status === "Activo" || c.status === "VIP").length);
-  $("repPau").textContent = String(db.clients.filter((c) => c.status === "Pausado").length);
-
-  const top = db.clients
-    .map((c) => {
-      const t = clientTotals(db, c.id);
-      return { name: c.name, total: t.total, last: t.last };
-    })
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 20);
-
-  const topBody = $("topBody");
-  topBody.innerHTML = top.length ? "" : `<tr><td colspan="3" style="opacity:.7;padding:14px">Sin data.</td></tr>`;
-  top.forEach((x) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td><strong>${escapeHtml(x.name)}</strong></td><td><strong>${money(x.total)}</strong></td><td>${escapeHtml(x.last || "—")}</td>`;
-    topBody.appendChild(tr);
-  });
-}
-
-/* ===== CLIENTS ===== */
-function renderClients() {
-  const db = loadDB();
-  const q = ($("clientSearch").value || "").trim().toLowerCase();
-
-  const rows = db.clients
-    .map((c) => {
-      const tags = (c.tags || []).join(", ");
-      const match =
-        !q ||
-        (c.name || "").toLowerCase().includes(q) ||
-        (c.contact || "").toLowerCase().includes(q) ||
-        tags.toLowerCase().includes(q);
-
-      if (!match) return null;
-
-      const t = clientTotals(db, c.id);
-      return { c, t, tags };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.t.total - a.t.total);
-
-  const body = $("clientsBody");
-  body.innerHTML = "";
-
-  if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="7" style="opacity:.7;padding:14px">Sin clientes todavía. Dale “+ Cliente”.</td></tr>`;
-    return;
-  }
-
-  rows.forEach(({ c, t, tags }) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><strong>${escapeHtml(c.name)}</strong><div style="opacity:.7;font-size:12px">${escapeHtml(c.note || "")}</div></td>
-      <td>${escapeHtml(c.contact || "—")}<div style="opacity:.7;font-size:12px">${escapeHtml(c.addr || "")}</div></td>
-      <td>${badge(c.status || "Prospecto")}</td>
-      <td>${escapeHtml(tags || "—")}</td>
-      <td>${escapeHtml(t.last || "—")}</td>
-      <td><strong>${money(t.total)}</strong></td>
-      <td>
-        <div class="aBtns">
-          <button class="aBtn" data-open="${c.id}" type="button">Abrir</button>
-          <button class="aBtn danger" data-del="${c.id}" type="button">Borrar</button>
-        </div>
-      </td>
-    `;
-    body.appendChild(tr);
-  });
-
-  body.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openProfile(b.dataset.open)));
-  body.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => deleteClient(b.dataset.del)));
-}
-
-/* ===== PROFILE ===== */
-function openProfile(clientId) {
-  const db = loadDB();
-  const c = db.clients.find((x) => x.id === clientId);
-  if (!c) return;
-
-  state.activeClientId = clientId;
-  $("clientProfile").style.display = "block";
-
-  $("pName").textContent = c.name || "Cliente";
-  $("pMeta").textContent = `${c.status || "Prospecto"} · ${c.contact || "—"}`;
-
-  $("pNameInput").value = c.name || "";
-  $("pContactInput").value = c.contact || "";
-  $("pAddrInput").value = c.addr || "";
-  $("pStatusInput").value = c.status || "Prospecto";
-  $("pTagsInput").value = (c.tags || []).join(", ");
-  $("pNoteInput").value = c.note || "";
-
-  renderVisits();
-  updateProfileKPIs();
-}
-
-function closeProfile() {
-  state.activeClientId = null;
-  $("clientProfile").style.display = "none";
-}
-
-function saveClientEdits() {
-  const db = loadDB();
-  const c = db.clients.find((x) => x.id === state.activeClientId);
-  if (!c) return;
-
-  c.name = ($("pNameInput").value || "").trim() || c.name;
-  c.contact = ($("pContactInput").value || "").trim();
-  c.addr = ($("pAddrInput").value || "").trim();
-  c.status = $("pStatusInput").value || "Prospecto";
-  c.tags = ($("pTagsInput").value || "").split(",").map((x) => x.trim()).filter(Boolean);
-  c.note = ($("pNoteInput").value || "").trim();
-  c.updatedAt = new Date().toISOString();
-
-  saveDB(db);
-  openProfile(c.id);
-  renderClients();
-  updateKPIs();
-}
-
-function deleteClient(id) {
-  if (!confirm("¿Borrar cliente y su historial?")) return;
-  const db = loadDB();
-  db.clients = db.clients.filter((c) => c.id !== id);
-  db.visits = db.visits.filter((v) => v.clientId !== id);
-  saveDB(db);
-
-  if (state.activeClientId === id) closeProfile();
-  renderClients();
-  renderTimeline();
-  updateKPIs();
-}
-
-/* ===== VISITS ===== */
-function renderVisits() {
-  const db = loadDB();
-  const cid = state.activeClientId;
-  const q = ($("visitSearch").value || "").trim().toLowerCase();
-
-  const vs = db.visits
-    .filter((v) => v.clientId === cid)
-    .filter((v) => {
-      if (!q) return true;
-      return (
-        (v.service || "").toLowerCase().includes(q) ||
-        (v.note || "").toLowerCase().includes(q) ||
-        String(v.amount || "").includes(q) ||
-        String(v.date || "").includes(q)
-      );
-    })
-    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
-
-  const body = $("visitsBody");
-  body.innerHTML = "";
-
-  if (!vs.length) {
-    body.innerHTML = `<tr><td colspan="5" style="opacity:.7;padding:14px">Sin visitas todavía.</td></tr>`;
-    return;
-  }
-
-  vs.forEach((v) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(v.date || "—")}</td>
-      <td><strong>${escapeHtml(v.service || "—")}</strong></td>
-      <td><strong>${money(v.amount || 0)}</strong></td>
-      <td>${escapeHtml(v.note || "")}</td>
-      <td>
-        <div class="aBtns">
-          <button class="aBtn" data-edit="${v.id}" type="button">Editar</button>
-          <button class="aBtn danger" data-delv="${v.id}" type="button">Borrar</button>
-        </div>
-      </td>
-    `;
-    body.appendChild(tr);
-  });
-
-  body.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openVisitModal(b.dataset.edit)));
-  body.querySelectorAll("[data-delv]").forEach((b) => b.addEventListener("click", () => deleteVisit(b.dataset.delv)));
-}
-
-function openVisitModal(visitId = null) {
-  state.editingVisitId = visitId;
-  $("visitModal").style.display = "flex";
-
-  $("vDate").value = todayISO();
-  $("vAmount").value = "";
-  $("vService").value = "";
-  $("vNote").value = "";
-  $("visitModalTitle").textContent = visitId ? "Editar Visita" : "Nueva Visita";
-
-  if (visitId) {
-    const db = loadDB();
-    const v = db.visits.find((x) => x.id === visitId);
-    if (v) {
-      $("vDate").value = v.date || todayISO();
-      $("vAmount").value = v.amount ?? 0;
-      $("vService").value = v.service || "";
-      $("vNote").value = v.note || "";
-    }
-  }
-}
-
-function closeVisitModal() {
-  $("visitModal").style.display = "none";
-  state.editingVisitId = null;
-}
-
-function saveVisit() {
-  const cid = state.activeClientId;
-  if (!cid) return alert("Abre un cliente primero.");
-
-  const date = $("vDate").value || todayISO();
-
-  const amountRaw = $("vAmount").value;
-  const amount = Number(amountRaw);
-  if (Number.isNaN(amount)) return alert("Monto inválido.");
-
-  const service = ($("vService").value || "").trim() || "Servicio";
-  const note = ($("vNote").value || "").trim();
-
-  const db = loadDB();
-  const now = new Date().toISOString();
-
-  if (state.editingVisitId) {
-    const v = db.visits.find((x) => x.id === state.editingVisitId);
-    if (!v) return;
-    v.date = date;
-    v.amount = amount;
-    v.service = service;
-    v.note = note;
-    v.updatedAt = now;
-  } else {
-    db.visits.unshift({
-      id: uid("v"),
-      clientId: cid,
-      date,
-      amount,
-      service,
-      note,
-      createdAt: now,
-      updatedAt: now
-    });
-  }
-
-  saveDB(db);
-  closeVisitModal();
-  renderVisits();
-  updateProfileKPIs();
-  renderClients();
-  renderTimeline();
-  updateKPIs();
-}
-
-function deleteVisit(id) {
-  if (!confirm("¿Borrar visita?")) return;
-  const db = loadDB();
-  db.visits = db.visits.filter((v) => v.id !== id);
-  saveDB(db);
-  renderVisits();
-  updateProfileKPIs();
-  renderClients();
-  renderTimeline();
-  updateKPIs();
-}
-
-/* ===== TIMELINE ===== */
-function renderTimeline() {
-  const db = loadDB();
-  const q = ($("timelineSearch").value || "").trim().toLowerCase();
-
-  const rows = db.visits
-    .map((v) => {
-      const c = db.clients.find((x) => x.id === v.clientId);
-      return { v, c };
-    })
-    .filter((x) => x.c)
-    .filter(({ v, c }) => {
-      if (!q) return true;
-      return (
-        (c.name || "").toLowerCase().includes(q) ||
-        (v.service || "").toLowerCase().includes(q) ||
-        (v.note || "").toLowerCase().includes(q) ||
-        String(v.amount || "").includes(q) ||
-        String(v.date || "").includes(q)
-      );
-    })
-    .sort((a, b) => String(b.v.date || "").localeCompare(String(a.v.date || "")))
-    .slice(0, 250);
-
-  const body = $("timelineBody");
-  body.innerHTML = "";
-
-  if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="5" style="opacity:.7;padding:14px">Sin actividad.</td></tr>`;
-    return;
-  }
-
-  rows.forEach(({ v, c }) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(v.date || "—")}</td>
-      <td><strong>${escapeHtml(c.name || "—")}</strong></td>
-      <td>${escapeHtml(v.service || "—")}</td>
-      <td><strong>${money(v.amount || 0)}</strong></td>
-      <td>${escapeHtml(v.note || "")}</td>
-    `;
-    body.appendChild(tr);
-  });
-}
-
-/* ===== EXPORT / IMPORT ===== */
-function exportJSON() {
-  const db = loadDB();
-  const payload = { exportedAt: new Date().toISOString(), db };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `oasis_crm_${todayISO()}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 500);
-}
-
-async function importJSON(file) {
-  try {
-    const txt = await file.text();
-    const data = JSON.parse(txt);
-    const db = data.db || data;
-    if (!db.clients || !db.visits) return alert("Archivo inválido.");
-    const normalized = normalizeDB({ clients: db.clients, visits: db.visits });
-    saveDB(normalized);
-    refreshAll();
-    alert("Importado ✅");
-  } catch {
-    alert("No se pudo importar.");
-  }
-}
-
-/* ===== MODAL CLIENTE ===== */
-function openClientModal() {
-  $("clientModal").style.display = "flex";
-  $("mName").value = "";
-  $("mContact").value = "";
-  $("mAddr").value = "";
-  $("mStatus").value = "Prospecto";
-  $("mTags").value = "";
-  $("mNote").value = "";
-}
-function closeClientModal() { $("clientModal").style.display = "none"; }
-
-function createClient() {
-  const name = ($("mName").value || "").trim();
-  if (!name) return alert("Nombre requerido.");
-
-  const db = loadDB();
-  const now = new Date().toISOString();
-
-  const c = {
-    id: uid("c"),
-    name,
-    contact: ($("mContact").value || "").trim(),
-    addr: ($("mAddr").value || "").trim(),
-    status: $("mStatus").value || "Prospecto",
-    tags: ($("mTags").value || "").split(",").map((x) => x.trim()).filter(Boolean),
-    note: ($("mNote").value || "").trim(),
-    createdAt: now,
-    updatedAt: now
-  };
-
-  db.clients.unshift(c);
-  saveDB(db);
-
-  closeClientModal();
-  renderClients();
-  updateKPIs();
-  openProfile(c.id);
-}
-
-/* ===== RESET ===== */
-function resetAll() {
-  if (!confirm("¿Borrar TODO (clientes + visitas) de este navegador?")) return;
-  localStorage.removeItem(KEY);
-  closeProfile();
-  refreshAll();
-}
-
-/* ===== REFRESH ===== */
-function refreshAll() {
-  updateKPIs();
-  renderClients();
-  renderTimeline();
-  if (state.activeClientId) openProfile(state.activeClientId);
-}
-
-/* =========================================================
-   FIRESTORE PATHS (dentro de tus reglas /users/{uid}/...)
-   ========================================================= */
 function clientCol(uidVal) {
   return fbDB.collection("users").doc(uidVal)
     .collection("oasis_crm").doc("clients")
@@ -669,8 +801,9 @@ async function testWrite(uidVal) {
   }, { merge: true });
 }
 
-/* ===== Sync (pull/push) ===== */
-function ts(s) { return String(s || ""); }
+function ts(s) {
+  return String(s || "");
+}
 
 async function pullFirebaseToLocal() {
   const u = fbUser();
@@ -710,7 +843,6 @@ async function pullFirebaseToLocal() {
     visits: Array.from(localVisitsMap.values())
   });
 
-  // Guardar sin disparar loops excesivos: guardamos y ya (debounce hace el resto)
   localStorage.setItem(KEY, JSON.stringify(merged));
 }
 
@@ -722,10 +854,8 @@ async function pushLocalToFirebase() {
   const uidVal = u.uid;
   const db = loadDB();
 
-  // ping visible en consola
   await testWrite(uidVal);
 
-  // Batch chunked (límite 500 ops)
   const ops = [];
 
   db.clients.forEach(c => {
@@ -750,7 +880,6 @@ async function pushLocalToFirebase() {
   }
 }
 
-/* ===== Auth (iOS safe) ===== */
 async function fbLogin() {
   if (!fbReady()) return alert("Firebase no está listo.");
 
@@ -782,7 +911,6 @@ async function fbHandleRedirectResult() {
       }
     }
   } catch (e) {
-    // si no hay redirect, normal; si hubo error real, lo mostramos
     const msg = String(e?.message || "").toLowerCase();
     if (msg && !msg.includes("redirect") && !msg.includes("no redirect")) {
       alert("Login redirect falló: " + (e?.message || e));
@@ -795,7 +923,25 @@ async function fbLogout() {
   await fbAuth.signOut();
 }
 
-/* ===== Bind de botones config ===== */
+/* ===== Bindings ===== */
+function bindPin() {
+  document.querySelectorAll("[data-pin]").forEach((btn) => {
+    btn.addEventListener("click", () => appendPinDigit(btn.dataset.pin));
+  });
+
+  $("btnPinClear")?.addEventListener("click", clearPinBuffer);
+  $("btnPinBack")?.addEventListener("click", backspacePin);
+
+  window.addEventListener("keydown", (e) => {
+    const lockVisible = $("lockScreen")?.classList.contains("show");
+    if (!lockVisible) return;
+
+    if (/^\d$/.test(e.key)) appendPinDigit(e.key);
+    if (e.key === "Backspace") backspacePin();
+    if (e.key === "Escape") clearPinBuffer();
+  });
+}
+
 function bindFirebaseButtons() {
   $("btnLogin")?.addEventListener("click", async () => {
     try { await fbLogin(); } catch (e) { alert(e?.message || e); }
@@ -805,56 +951,79 @@ function bindFirebaseButtons() {
     try { await fbLogout(); } catch (e) { alert(e?.message || e); }
   });
 
-  // Este botón queda como “manual override” (pero auto-sync ya corre solo)
   $("btnSyncNow")?.addEventListener("click", async () => {
-    try { await safeSyncNow("manual"); alert("Sync OK ✅"); } catch (e) { alert(e?.message || e); }
+    try {
+      await safeSyncNow("manual");
+      alert("Sync OK ✅");
+    } catch (e) {
+      alert(e?.message || e);
+    }
   });
 }
 
-/* ===== Boot ===== */
-(function boot() {
-  // Hub
+function bindUI() {
   $("hubBackBtn").href = HUB_URL;
 
-  // Tabs
   document.querySelectorAll(".tab").forEach((b) => {
     b.addEventListener("click", () => setView(b.dataset.view));
   });
 
-  // Top buttons
-  $("btnNewClient").addEventListener("click", openClientModal);
-  $("btnExport").addEventListener("click", exportJSON);
-  $("btnImport").addEventListener("click", () => $("importFile").click());
-  $("importFile").addEventListener("change", (e) => {
+  $("btnNewClient")?.addEventListener("click", openClientModal);
+  $("btnHeroNewClient")?.addEventListener("click", openClientModal);
+
+  $("btnExport")?.addEventListener("click", exportJSON);
+  $("btnHeroExport")?.addEventListener("click", exportJSON);
+  $("btnSettingsExport")?.addEventListener("click", exportJSON);
+
+  $("btnImport")?.addEventListener("click", () => $("importFile").click());
+  $("btnSettingsImport")?.addEventListener("click", () => $("importFile").click());
+
+  $("importFile")?.addEventListener("change", (e) => {
     const f = e.target.files?.[0];
     if (f) importJSON(f);
     e.target.value = "";
   });
 
-  // Modal client
-  $("btnCloseModal").addEventListener("click", closeClientModal);
-  $("btnCreateClient").addEventListener("click", createClient);
+  $("btnCloseModal")?.addEventListener("click", closeClientModal);
+  $("btnCreateClient")?.addEventListener("click", createClient);
 
-  // Profile actions
-  $("btnCloseProfile").addEventListener("click", closeProfile);
-  $("btnSaveClient").addEventListener("click", saveClientEdits);
-  $("btnDeleteClient").addEventListener("click", () => deleteClient(state.activeClientId));
-  $("btnAddVisit").addEventListener("click", () => openVisitModal(null));
+  $("btnCloseProfile")?.addEventListener("click", closeProfile);
+  $("btnSaveClient")?.addEventListener("click", saveClientEdits);
+  $("btnDeleteClient")?.addEventListener("click", () => deleteClient(state.activeClientId));
+  $("btnAddVisit")?.addEventListener("click", () => openVisitModal(null));
 
-  // Visit modal
-  $("btnCloseVisitModal").addEventListener("click", closeVisitModal);
-  $("btnSaveVisit").addEventListener("click", saveVisit);
+  $("btnCloseVisitModal")?.addEventListener("click", closeVisitModal);
+  $("btnSaveVisit")?.addEventListener("click", saveVisit);
   $("vDate").value = todayISO();
 
-  // Searches
-  $("clientSearch").addEventListener("input", renderClients);
-  $("visitSearch").addEventListener("input", renderVisits);
-  $("timelineSearch").addEventListener("input", renderTimeline);
+  $("clientSearch")?.addEventListener("input", renderClients);
+  $("visitSearch")?.addEventListener("input", renderVisits);
+  $("timelineSearch")?.addEventListener("input", renderTimeline);
 
-  // Reset
-  $("btnResetAll").addEventListener("click", resetAll);
+  $("btnResetAll")?.addEventListener("click", resetAll);
 
-  // Firebase init
+  $("btnLockApp")?.addEventListener("click", () => {
+    clearSessionUnlock();
+    showLock("unlock");
+  });
+
+  $("btnLockNow")?.addEventListener("click", () => {
+    clearSessionUnlock();
+    showLock("unlock");
+  });
+
+  $("btnChangePin")?.addEventListener("click", () => {
+    clearSessionUnlock();
+    showLock("change");
+  });
+}
+
+/* ===== Boot ===== */
+(function boot() {
+  bindUI();
+  bindPin();
+  updatePinStatus();
+
   try {
     if (window.firebase) {
       if (!firebase.apps || !firebase.apps.length) {
@@ -862,6 +1031,7 @@ function bindFirebaseButtons() {
       } else {
         fbApp = firebase.app();
       }
+
       fbAuth = firebase.auth();
       fbDB = firebase.firestore();
 
@@ -883,18 +1053,12 @@ function bindFirebaseButtons() {
         }
 
         fbStatus(`online (${u.email})`);
-
-        // Auto-sync inmediato al login
         await safeSyncNow("login");
-
-        // Auto-sync continuo
         startAutoSyncLoop();
       });
 
-      // iOS redirect result
       fbHandleRedirectResult();
 
-      // Auto-push al irse a background/cerrar
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") safeSyncNow("background");
       });
@@ -902,7 +1066,6 @@ function bindFirebaseButtons() {
       window.addEventListener("pagehide", () => {
         safeSyncNow("pagehide");
       });
-
     } else {
       fbStatus("offline");
     }
@@ -911,6 +1074,14 @@ function bindFirebaseButtons() {
     console.error("Firebase init error:", e);
   }
 
-  // First paint
   refreshAll();
+
+  const hasPin = !!getStoredPin();
+  if (!hasPin) {
+    showLock("create");
+  } else if (!hasSessionUnlock()) {
+    showLock("unlock");
+  } else {
+    hideLock();
+  }
 })();
