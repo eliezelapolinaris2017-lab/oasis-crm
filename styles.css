@@ -541,3 +541,139 @@ button,input,select{font:inherit}
     align-items:flex-start;
   }
 }
+.dashboardHero{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:16px;
+  margin-bottom:18px;
+}
+
+.dashboardHero-small{
+  margin-bottom:18px;
+}
+
+.radialCard,
+.valueCard{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  padding:18px;
+  min-width:0;
+}
+
+.radialCard{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.radialWrap{
+  flex:0 0 auto;
+}
+
+.radial{
+  width:108px;
+  height:108px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  position:relative;
+}
+
+.radial::before{
+  content:"";
+  position:absolute;
+  inset:10px;
+  background:#fff;
+  border-radius:999px;
+  z-index:1;
+}
+
+.radialInner{
+  position:relative;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+.radialInner strong{
+  font-size:22px;
+  line-height:1;
+  font-weight:800;
+}
+
+.radialInner span{
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+  font-weight:700;
+}
+
+.ring-a{
+  background:conic-gradient(var(--primary) 0 280deg, #ebe7ef 280deg 360deg);
+}
+
+.ring-b{
+  background:conic-gradient(var(--accent) 0 250deg, #f4ebe3 250deg 360deg);
+}
+
+.ring-c{
+  background:conic-gradient(var(--success) 0 300deg, #e8f6ef 300deg 360deg);
+}
+
+.radialMeta{
+  min-width:0;
+}
+
+.radialTitle{
+  font-size:16px;
+  font-weight:800;
+}
+
+.radialHint{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.valueEyebrow{
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  font-weight:800;
+}
+
+.valueBig{
+  margin-top:10px;
+  font-size:30px;
+  font-weight:800;
+  letter-spacing:-.6px;
+}
+
+.valueHint{
+  margin-top:8px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+@media(max-width:1180px){
+  .dashboardHero{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:980px){
+  .dashboardHero{
+    grid-template-columns:1fr;
+  }
+
+  .radialCard{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}
