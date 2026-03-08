@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nexus CRM Pro</title>
+  <link rel="stylesheet" href="styles.css?v=20260308-1300" />
+</head>
+<body>
+
+  <div class="appLayout">
+
+    <aside class="sidebar">
+      <div class="sidebarBrand">
+        <div class="sidebarLogo">OA</div>
+        <div>
+          <div class="sidebarTitle">Nexus CRM Pro</div>
+          <div class="sidebarSub">Clientes · Historial · Seguimiento</div>
+        </div>
+      </div>
+
+      <nav class="sidebarNav tabs" id="mainTabs">
+        <button class="sideLink tab is-active" data-view="dashboard" type="button">Dashboard</button>
+        <button class="sideLink tab" data-view="clients" type="button">Clientes</button>
+        <button class="sideLink tab" data-view="timeline" type="button">Timeline</button>
+        <button class="sideLink tab" data-view="reporting" type="button">Reporte</button>
+        <button class="sideLink tab" data-view="settings" type="button">Config</button>
+      </nav>
+
+      <div class="sidebarFooter">
+        <button class="hubBtn" id="btnExitCRM" type="button">Salir</button>
+      </div>
+    </aside>
+
+    <section class="mainShell">
+
+      <header class="topbar">
+        <div>
+          <div class="pageTitle">Nexus CRM Pro</div>
+        </div>
+
+        <div class="topActions">
+          <button class="btn primary" id="btnNewClient" type="button">+ Cliente</button>
+        </div>
+      </header>
+
+      <main class="contentWrap">
+
+        <!-- DASHBOARD -->
+        <section class="view is-active" id="view-dashboard">
+          <section class="dashboardHero compactHero">
+            <article class="radialCard compactCard">
+              <div class="radialWrap">
+                <div class="radial ring-a">
+                  <div class="radialInner">
+                    <strong id="kpiClients">0</strong>
+                    <span>Clientes</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="radialCard compactCard">
+              <div class="radialWrap">
+                <div class="radial ring-b">
+                  <div class="radialInner">
+                    <strong id="kpiVIP">0</strong>
+                    <span>VIP</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="valueCard compactValue">
+              <div class="valueBig" id="kpiRevenue">$0.00</div>
+              <div class="miniLabel">Ingresos</div>
+            </article>
+          </section>
+
+          <section class="card section compactSection">
+            <div class="sectionHead">
+              <div class="sectionTitle">Actividad reciente</div>
+            </div>
+
+            <div class="tableWrap">
+              <table class="gridTable">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Servicio</th>
+                    <th>Monto</th>
+                  </tr>
+                </thead>
+                <tbody id="recentActivityBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <!-- CLIENTES -->
+        <section class="view" id="view-clients">
+
+          <section class="dashboardHero compactHero">
+            <article class="radialCard compactCard">
+              <div class="radialWrap">
+                <div class="radial ring-a">
+                  <div class="radialInner">
+                    <strong id="kpiClientsView">0</strong>
+                    <span>Clientes</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="radialCard compactCard">
+              <div class="radialWrap">
+                <div class="radial ring-b">
+                  <div class="radialInner">
+                    <strong id="kpiVIPView">0</strong>
+                    <span>VIP</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="valueCard compactValue">
+              <div class="valueBig" id="kpiRevenueView">$0.00</div>
+              <div class="miniLabel">Ingresos</div>
+            </article>
+          </section>
+
+          <section class="card section compactSection">
+            <div class="sectionHead">
+              <input class="input small" id="clientSearch" placeholder="Buscar cliente..." />
+            </div>
+
+            <div class="tableWrap">
+              <table class="gridTable">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Contacto</th>
+                    <th>Estado</th>
+                    <th>Tags</th>
+                    <th>Última</th>
+                    <th>Total</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="clientsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card section compactSection" id="clientProfile" style="display:none">
+            <div class="sectionHead">
+              <div class="sectionTitle" id="pName">Cliente</div>
+              <div class="rowBtns">
+                <button class="btn ghost" id="btnCloseProfile" type="button">Cerrar</button>
+                <button class="btn primary" id="btnAddVisit" type="button">+ Visita</button>
+              </div>
+            </div>
+
+            <section class="dashboardHero compactHero profileHero">
+              <article class="radialCard compactCard">
+                <div class="radialWrap">
+                  <div class="radial ring-c">
+                    <div class="radialInner">
+                      <strong id="pLastVisit">—</strong>
+                      <span>Última</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="valueCard compactValue">
+                <div class="valueBig" id="pTotal">$0.00</div>
+                <div class="miniLabel">Total</div>
+              </article>
+            </section>
+
+            <div class="grid2">
+              <div class="field"><label>Nombre</label><input class="input" id="pNameInput" /></div>
+              <div class="field"><label>Contacto</label><input class="input" id="pContactInput" /></div>
+              <div class="field"><label>Dirección</label><input class="input" id="pAddrInput" /></div>
+              <div class="field">
+                <label>Estado</label>
+                <select class="input" id="pStatusInput">
+                  <option>Prospecto</option>
+                  <option>Activo</option>
+                  <option>VIP</option>
+                  <option>Pausado</option>
+                </select>
+              </div>
+              <div class="field"><label>Tags</label><input class="input" id="pTagsInput" /></div>
+              <div class="field"><label>Nota</label><input class="input" id="pNoteInput" /></div>
+            </div>
+
+            <div class="rowBtns" style="margin-top:10px">
+              <button class="btn primary" id="btnSaveClient" type="button">Guardar</button>
+              <button class="btn danger" id="btnDeleteClient" type="button">Borrar</button>
+            </div>
+
+            <div class="sectionHead slimHead">
+              <input class="input small" id="visitSearch" placeholder="Buscar visita..." />
+            </div>
+
+            <div class="tableWrap">
+              <table class="gridTable">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Servicio</th>
+                    <th>Monto</th>
+                    <th>Nota</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="visitsBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <!-- TIMELINE -->
+        <section class="view" id="view-timeline">
+          <section class="card section compactSection">
+            <div class="sectionHead">
+              <input class="input small" id="timelineSearch" placeholder="Buscar..." />
+            </div>
+
+            <div class="tableWrap">
+              <table class="gridTable">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Servicio</th>
+                    <th>Monto</th>
+                    <th>Nota</th>
+                  </tr>
+                </thead>
+                <tbody id="timelineBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <!-- REPORTE -->
+        <section class="view" id="view-reporting">
+          <section class="dashboardHero compactHero">
+            <article class="radialCard compactCard">
+              <div class="radialWrap">
+                <div class="radial ring-a">
+                  <div class="radialInner">
+                    <strong id="repPros">0</strong>
+                    <span>Pros</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="radialCard compactCard">
+              <div class="radialWrap">
+                <div class="radial ring-b">
+                  <div class="radialInner">
+                    <strong id="repAct">0</strong>
+                    <span>Act</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="radialCard compactCard">
+              <div class="radialWrap">
+                <div class="radial ring-c">
+                  <div class="radialInner">
+                    <strong id="repPau">0</strong>
+                    <span>Pau</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="card section compactSection">
+            <div class="tableWrap">
+              <table class="gridTable">
+                <thead>
+                  <tr><th>Cliente</th><th>Total</th><th>Última visita</th></tr>
+                </thead>
+                <tbody id="topBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <!-- CONFIG -->
+        <section class="view" id="view-settings">
+          <section class="card section compactSection">
+            <div class="sectionHead">
+              <div class="rowBtns">
+                <button class="btn primary" id="btnLogin" type="button">Login Google</button>
+                <button class="btn ghost" id="btnLogout" type="button">Logout</button>
+              </div>
+            </div>
+            <div class="muted" id="fbStatus">Estado: offline</div>
+          </section>
+
+          <section class="card section compactSection">
+            <div class="sectionHead">
+              <div class="rowBtns">
+                <button class="btn ghost" id="btnChangePin" type="button">Cambiar PIN</button>
+                <button class="btn ghost" id="btnExportBackup" type="button">Backup</button>
+                <button class="btn ghost" id="btnRestoreBackup" type="button">Restaurar</button>
+                <input id="restoreBackupFile" type="file" accept="application/json" hidden />
+                <button class="btn danger" id="btnResetAll" type="button">Borrar todo</button>
+              </div>
+            </div>
+            <div class="muted" id="pinStatus">PIN no configurado</div>
+          </section>
+        </section>
+
+      </main>
+    </section>
+  </div>
+
+  <div class="lockScreen" id="lockScreen">
+    <div class="lockCard">
+      <div class="lockTitle">Oasis CRM Pro</div>
+      <div class="lockModeText" id="lockModeText">Acceso seguro</div>
+      <div class="lockInfo" id="lockInfo">Ingresa tu PIN de 4 dígitos.</div>
+
+      <div class="pinDots" id="pinDots">
+        <span></span><span></span><span></span><span></span>
+      </div>
+
+      <div class="pinPad">
+        <button type="button" data-pin="1">1</button>
+        <button type="button" data-pin="2">2</button>
+        <button type="button" data-pin="3">3</button>
+        <button type="button" data-pin="4">4</button>
+        <button type="button" data-pin="5">5</button>
+        <button type="button" data-pin="6">6</button>
+        <button type="button" data-pin="7">7</button>
+        <button type="button" data-pin="8">8</button>
+        <button type="button" data-pin="9">9</button>
+        <button type="button" id="btnPinClear">C</button>
+        <button type="button" data-pin="0">0</button>
+        <button type="button" id="btnPinBack">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="clientModal" style="display:none">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div class="modalTitle">Nuevo cliente</div>
+        <button class="btn ghost" id="btnCloseModal" type="button">Cerrar</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input class="input" id="mName" /></div>
+          <div class="field"><label>Contacto</label><input class="input" id="mContact" /></div>
+          <div class="field"><label>Dirección</label><input class="input" id="mAddr" /></div>
+          <div class="field">
+            <label>Estado</label>
+            <select class="input" id="mStatus">
+              <option>Prospecto</option>
+              <option>Activo</option>
+              <option>VIP</option>
+              <option>Pausado</option>
+            </select>
+          </div>
+          <div class="field"><label>Tags</label><input class="input" id="mTags" /></div>
+          <div class="field"><label>Nota</label><input class="input" id="mNote" /></div>
+        </div>
+
+        <div class="rowBtns" style="margin-top:12px">
+          <button class="btn primary" id="btnCreateClient" type="button">Crear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="visitModal" style="display:none">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div class="modalTitle" id="visitModalTitle">Nueva visita</div>
+        <button class="btn ghost" id="btnCloseVisitModal" type="button">Cerrar</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="grid2">
+          <div class="field"><label>Fecha</label><input class="input" id="vDate" type="date" /></div>
+          <div class="field"><label>Monto</label><input class="input" id="vAmount" type="number" step="0.01" min="0" /></div>
+          <div class="field"><label>Servicio</label><input class="input" id="vService" /></div>
+          <div class="field"><label>Nota</label><input class="input" id="vNote" /></div>
+        </div>
+
+        <div class="rowBtns" style="margin-top:12px">
+          <button class="btn primary" id="btnSaveVisit" type="button">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+  <script src="app.js?v=20260308-1300"></script>
+</body>
+</html>
