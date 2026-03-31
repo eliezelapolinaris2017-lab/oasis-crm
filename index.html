@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Oasis CRM Pro V3</title>
+  <meta name="theme-color" content="#09090f" />
+  <link rel="stylesheet" href="styles.css?v=20260331-1" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="logo.png" alt="Oasis CRM" class="brandLogo" />
+        <div>
+          <div class="brandTitle">Oasis CRM Pro</div>
+          <div class="brandSub">V3 · Más rápido · Más limpio</div>
+        </div>
+      </div>
+
+      <nav class="nav" id="mainTabs">
+        <button class="navBtn is-active" data-view="dashboard" type="button">Dashboard</button>
+        <button class="navBtn" data-view="clients" type="button">Clientes</button>
+        <button class="navBtn" data-view="timeline" type="button">Timeline</button>
+        <button class="navBtn" data-view="reporting" type="button">Reporte</button>
+        <button class="navBtn" data-view="settings" type="button">Config</button>
+      </nav>
+
+      <div class="sidebarFoot">
+        <div class="syncPill" id="syncStatus">Local</div>
+        <button class="btn ghost full" id="btnExitCRM" type="button">Salir</button>
+      </div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">Oasis Air Cleaner Services LLC</div>
+          <h1 class="pageTitle" id="pageTitle">Dashboard</h1>
+        </div>
+
+        <div class="topActions wrap">
+          <input class="input quickSearch" id="globalSearch" placeholder="Buscar cliente, contacto, tag o servicio..." />
+          <button class="btn ghost" id="btnOpenQuickVisit" type="button">+ Visita rápida</button>
+          <button class="btn primary" id="btnNewClient" type="button">+ Cliente</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="view is-active" id="view-dashboard">
+          <section class="heroGrid">
+            <article class="metricCard glow-a">
+              <div class="metricLabel">Clientes</div>
+              <div class="metricValue" id="kpiClients">0</div>
+              <div class="metricMeta" id="kpiActiveClients">0 activos</div>
+            </article>
+
+            <article class="metricCard glow-b">
+              <div class="metricLabel">VIP</div>
+              <div class="metricValue" id="kpiVIP">0</div>
+              <div class="metricMeta">Prioridad alta</div>
+            </article>
+
+            <article class="metricCard glow-c">
+              <div class="metricLabel">Ingresos</div>
+              <div class="metricValue" id="kpiRevenue">$0.00</div>
+              <div class="metricMeta" id="kpiVisits">0 visitas</div>
+            </article>
+
+            <article class="metricCard">
+              <div class="metricLabel">Ticket promedio</div>
+              <div class="metricValue" id="kpiAvgTicket">$0.00</div>
+              <div class="metricMeta">Por visita</div>
+            </article>
+          </section>
+
+          <section class="panel split2">
+            <article class="card">
+              <div class="cardHead">
+                <h2>Actividad reciente</h2>
+                <span class="chip" id="recentCountChip">0 registros</span>
+              </div>
+              <div class="tableWrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Cliente</th>
+                      <th>Servicio</th>
+                      <th>Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recentActivityBody"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="cardHead">
+                <h2>Top clientes</h2>
+                <span class="chip">Ranking</span>
+              </div>
+              <div class="listStack" id="topClientsList"></div>
+            </article>
+          </section>
+        </section>
+
+        <section class="view" id="view-clients">
+          <section class="toolbar card compact">
+            <div class="toolbarRow">
+              <input class="input" id="clientSearch" placeholder="Buscar cliente..." />
+              <select class="input selectFit" id="clientStatusFilter">
+                <option value="all">Todos los estados</option>
+                <option value="Prospecto">Prospecto</option>
+                <option value="Activo">Activo</option>
+                <option value="VIP">VIP</option>
+                <option value="Pausado">Pausado</option>
+              </select>
+              <select class="input selectFit" id="clientSort">
+                <option value="updated">Más recientes</option>
+                <option value="name">Nombre A-Z</option>
+                <option value="revenue">Mayor ingreso</option>
+                <option value="last">Última visita</option>
+              </select>
+            </div>
+          </section>
+
+          <section class="panel split2 profileSplit">
+            <article class="card">
+              <div class="cardHead">
+                <h2>Base de clientes</h2>
+                <span class="chip" id="clientsCountChip">0 clientes</span>
+              </div>
+              <div class="tableWrap tall">
+                <table class="table stickyHead">
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Estado</th>
+                      <th>Contacto</th>
+                      <th>Total</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="clientsBody"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="card profileCard" id="clientProfileCard">
+              <div class="emptyState" id="emptyProfileState">
+                <div class="emptyIcon">◎</div>
+                <h3>Selecciona un cliente</h3>
+                <p>Aquí vas a editar, revisar visitas y meter data sin perder tiempo.</p>
+              </div>
+
+              <div id="clientProfile" class="hidden">
+                <div class="cardHead profileHead">
+                  <div>
+                    <h2 id="pName">Cliente</h2>
+                    <div class="muted" id="profileSub">Sin contacto</div>
+                  </div>
+                  <div class="topActions wrap">
+                    <button class="btn ghost" id="btnCloseProfile" type="button">Cerrar</button>
+                    <button class="btn primary" id="btnAddVisit" type="button">+ Visita</button>
+                  </div>
+                </div>
+
+                <div class="miniMetrics">
+                  <div class="miniCard">
+                    <span>Última visita</span>
+                    <strong id="pLastVisit">—</strong>
+                  </div>
+                  <div class="miniCard">
+                    <span>Total</span>
+                    <strong id="pTotal">$0.00</strong>
+                  </div>
+                  <div class="miniCard">
+                    <span>Visitas</span>
+                    <strong id="pVisitCount">0</strong>
+                  </div>
+                </div>
+
+                <div class="grid2 formGrid">
+                  <div class="field"><label>Nombre</label><input class="input" id="pNameInput" /></div>
+                  <div class="field"><label>Contacto</label><input class="input" id="pContactInput" /></div>
+                  <div class="field"><label>Dirección</label><input class="input" id="pAddrInput" /></div>
+                  <div class="field">
+                    <label>Estado</label>
+                    <select class="input" id="pStatusInput">
+                      <option>Prospecto</option>
+                      <option>Activo</option>
+                      <option>VIP</option>
+                      <option>Pausado</option>
+                    </select>
+                  </div>
+                  <div class="field"><label>Tags</label><input class="input" id="pTagsInput" placeholder="residencial, contrato, mantenimiento" /></div>
+                  <div class="field"><label>Nota</label><input class="input" id="pNoteInput" /></div>
+                </div>
+
+                <div class="topActions wrap gapTop">
+                  <button class="btn primary" id="btnSaveClient" type="button">Guardar cambios</button>
+                  <button class="btn danger" id="btnDeleteClient" type="button">Borrar cliente</button>
+                </div>
+
+                <div class="cardHead subHead">
+                  <h3>Historial de visitas</h3>
+                  <input class="input small" id="visitSearch" placeholder="Filtrar visitas..." />
+                </div>
+
+                <div class="tableWrap tallSmall">
+                  <table class="table stickyHead">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Servicio</th>
+                        <th>Monto</th>
+                        <th>Nota</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="visitsBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </article>
+          </section>
+        </section>
+
+        <section class="view" id="view-timeline">
+          <section class="toolbar card compact">
+            <div class="toolbarRow">
+              <input class="input" id="timelineSearch" placeholder="Buscar timeline..." />
+              <input class="input selectFit" id="timelineFrom" type="date" />
+              <input class="input selectFit" id="timelineTo" type="date" />
+              <button class="btn ghost" id="btnClearTimelineFilters" type="button">Limpiar</button>
+            </div>
+          </section>
+
+          <article class="card">
+            <div class="cardHead">
+              <h2>Timeline completo</h2>
+              <span class="chip" id="timelineCountChip">0 filas</span>
+            </div>
+            <div class="tableWrap tall">
+              <table class="table stickyHead">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Servicio</th>
+                    <th>Monto</th>
+                    <th>Nota</th>
+                  </tr>
+                </thead>
+                <tbody id="timelineBody"></tbody>
+              </table>
+            </div>
+            <div class="cardFoot right">
+              <button class="btn ghost" id="btnMoreTimeline" type="button">Cargar más</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" id="view-reporting">
+          <section class="heroGrid miniHero">
+            <article class="metricCard">
+              <div class="metricLabel">Prospectos</div>
+              <div class="metricValue" id="repPros">0</div>
+            </article>
+            <article class="metricCard">
+              <div class="metricLabel">Activos / VIP</div>
+              <div class="metricValue" id="repAct">0</div>
+            </article>
+            <article class="metricCard">
+              <div class="metricLabel">Pausados</div>
+              <div class="metricValue" id="repPau">0</div>
+            </article>
+          </section>
+
+          <section class="panel split2">
+            <article class="card">
+              <div class="cardHead">
+                <h2>Clientes por ingreso</h2>
+              </div>
+              <div class="tableWrap">
+                <table class="table">
+                  <thead>
+                    <tr><th>Cliente</th><th>Total</th><th>Última visita</th></tr>
+                  </thead>
+                  <tbody id="topBody"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="cardHead">
+                <h2>Resumen mensual</h2>
+              </div>
+              <div class="listStack" id="monthSummary"></div>
+            </article>
+          </section>
+        </section>
+
+        <section class="view" id="view-settings">
+          <section class="panel split2">
+            <article class="card">
+              <div class="cardHead">
+                <h2>Firebase</h2>
+                <span class="chip" id="fbStatus">Estado: offline</span>
+              </div>
+              <div class="stackActions">
+                <button class="btn primary" id="btnLogin" type="button">Login Google</button>
+                <button class="btn ghost" id="btnSyncNow" type="button">Sincronizar ahora</button>
+                <button class="btn ghost" id="btnLogout" type="button">Logout</button>
+              </div>
+              <p class="muted">La V3 corre local primero y sincroniza después. Así no se te ahoga cuando le metas data pesada.</p>
+            </article>
+
+            <article class="card">
+              <div class="cardHead">
+                <h2>Seguridad y backup</h2>
+                <span class="chip" id="pinStatus">PIN no configurado</span>
+              </div>
+              <div class="stackActions">
+                <button class="btn ghost" id="btnChangePin" type="button">Cambiar PIN</button>
+                <button class="btn ghost" id="btnExportBackup" type="button">Exportar backup</button>
+                <button class="btn ghost" id="btnRestoreBackup" type="button">Restaurar backup</button>
+                <button class="btn ghost" id="btnMigrateLegacy" type="button">Migrar data legacy</button>
+                <button class="btn danger" id="btnResetAll" type="button">Borrar todo local</button>
+                <input id="restoreBackupFile" type="file" accept="application/json" hidden />
+              </div>
+              <p class="muted">Primero backup, después inventamos. Esa regla nunca falla.</p>
+            </article>
+          </section>
+        </section>
+      </main>
+    </section>
+  </div>
+
+  <div class="lockScreen" id="lockScreen">
+    <div class="lockCard">
+      <img src="logo.png" alt="logo" class="lockLogo" />
+      <div class="lockTitle">Oasis CRM Pro</div>
+      <div class="lockModeText" id="lockModeText">Acceso seguro</div>
+      <div class="lockInfo" id="lockInfo">Ingresa tu PIN de 4 dígitos.</div>
+
+      <div class="pinDots" id="pinDots"><span></span><span></span><span></span><span></span></div>
+
+      <div class="pinPad">
+        <button type="button" data-pin="1">1</button>
+        <button type="button" data-pin="2">2</button>
+        <button type="button" data-pin="3">3</button>
+        <button type="button" data-pin="4">4</button>
+        <button type="button" data-pin="5">5</button>
+        <button type="button" data-pin="6">6</button>
+        <button type="button" data-pin="7">7</button>
+        <button type="button" data-pin="8">8</button>
+        <button type="button" data-pin="9">9</button>
+        <button type="button" id="btnPinClear">C</button>
+        <button type="button" data-pin="0">0</button>
+        <button type="button" id="btnPinBack">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="clientModal" style="display:none">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div class="modalTitle">Nuevo cliente</div>
+        <button class="btn ghost" id="btnCloseModal" type="button">Cerrar</button>
+      </div>
+      <div class="modalBody">
+        <div class="grid2">
+          <div class="field"><label>Nombre</label><input class="input" id="mName" /></div>
+          <div class="field"><label>Contacto</label><input class="input" id="mContact" /></div>
+          <div class="field"><label>Dirección</label><input class="input" id="mAddr" /></div>
+          <div class="field"><label>Estado</label>
+            <select class="input" id="mStatus">
+              <option>Prospecto</option>
+              <option>Activo</option>
+              <option>VIP</option>
+              <option>Pausado</option>
+            </select>
+          </div>
+          <div class="field"><label>Tags</label><input class="input" id="mTags" /></div>
+          <div class="field"><label>Nota</label><input class="input" id="mNote" /></div>
+        </div>
+        <div class="cardFoot right">
+          <button class="btn primary" id="btnCreateClient" type="button">Crear cliente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="visitModal" style="display:none">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div class="modalTitle" id="visitModalTitle">Nueva visita</div>
+        <button class="btn ghost" id="btnCloseVisitModal" type="button">Cerrar</button>
+      </div>
+      <div class="modalBody">
+        <div class="grid2">
+          <div class="field"><label>Cliente</label><select class="input" id="vClient"></select></div>
+          <div class="field"><label>Fecha</label><input class="input" id="vDate" type="date" /></div>
+          <div class="field"><label>Servicio</label><input class="input" id="vService" /></div>
+          <div class="field"><label>Monto</label><input class="input" id="vAmount" type="number" step="0.01" min="0" /></div>
+          <div class="field full"><label>Nota</label><input class="input" id="vNote" /></div>
+        </div>
+        <div class="cardFoot right">
+          <button class="btn primary" id="btnSaveVisit" type="button">Guardar visita</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="app.js?v=20260331-1"></script>
+</body>
+</html>
